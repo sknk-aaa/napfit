@@ -7,6 +7,9 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { setupNotificationHandler } from '@/src/notifications/schedule';
+
+setupNotificationHandler();
 
 export { ErrorBoundary } from 'expo-router';
 
