@@ -131,9 +131,12 @@ export default function NapActiveScreen() {
       await cancelNotification(notifIdRef.current);
       notifIdRef.current = null;
     }
+    // BGMを止める前にアラームを起動する。
+    // stopBgm() → startAlarm() の順だとバックグラウンドで音声が一瞬途切れ、
+    // iOS がアプリを suspend してアラームが鳴らない原因になる。
+    await startAlarm();
     await stopBgm();
     setBgmActive(false);
-    await startAlarm();
     router.replace({
       pathname: '/nap/wake',
       params: { recordId: recordIdRef.current ?? '', duration: String(durationMinutes) },

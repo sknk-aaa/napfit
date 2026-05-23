@@ -24,7 +24,7 @@ export async function startAlarm(): Promise<void> {
 
   const { sound } = await Audio.Sound.createAsync(file, {
     isLooping: true,
-    volume: 0,
+    volume: 0.1,
     shouldPlay: true,
   });
   _sound = sound;
@@ -33,7 +33,7 @@ export async function startAlarm(): Promise<void> {
   const fade = setInterval(async () => {
     step++;
     try {
-      await sound.setVolumeAsync(Math.min(step / FADE_IN_STEPS, 1.0));
+      await sound.setVolumeAsync(Math.min(0.1 + (step / FADE_IN_STEPS) * 0.9, 1.0));
     } catch {}
     if (step >= FADE_IN_STEPS) clearInterval(fade);
   }, FADE_IN_INTERVAL_MS);
