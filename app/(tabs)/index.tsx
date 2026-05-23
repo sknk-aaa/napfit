@@ -30,6 +30,7 @@ export default function HomeScreen() {
   const [hasActiveNap, setHasActiveNap] = useState(false);
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customDuration, setCustomDuration] = useState(25);
+  const [hasCustom, setHasCustom] = useState(false);
 
   // 初回マウント時のみオンボーディング確認（Stack が描画済みなので安全）
   useEffect(() => {
@@ -86,6 +87,7 @@ export default function HomeScreen() {
 
   function handleCustomConfirm() {
     setSelectedDuration(customDuration);
+    setHasCustom(true);
     setCustomModalVisible(false);
   }
 
@@ -145,18 +147,37 @@ export default function HomeScreen() {
               </Text>
             </TouchableOpacity>
           ))}
+
+          {hasCustom && (
+            <TouchableOpacity
+              style={[styles.timeButton, isCustomSelected && styles.timeButtonSelected]}
+              onPress={() =>
+                isCustomSelected
+                  ? setCustomModalVisible(true)
+                  : setSelectedDuration(customDuration)
+              }
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.timeButtonText, isCustomSelected && styles.timeButtonTextSelected]}>
+                {customDuration}分
+              </Text>
+              <Text style={[styles.customSubLabel, isCustomSelected && styles.customSubLabelSelected]}>
+                {isCustomSelected ? '変更' : 'カスタム'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* カスタム時間リンク */}
-        <TouchableOpacity
-          style={styles.customLink}
-          onPress={() => setCustomModalVisible(true)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.customLinkText}>
-            {isCustomSelected ? `カスタム: ${selectedDuration}分` : 'カスタム時間を設定'}
-          </Text>
-        </TouchableOpacity>
+        {/* カスタム未設定時のみリンクを表示 */}
+        {!hasCustom && (
+          <TouchableOpacity
+            style={styles.customLink}
+            onPress={() => setCustomModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.customLinkText}>カスタム時間を設定</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* 仮眠をはじめるボタン */}
@@ -456,6 +477,16 @@ const styles = StyleSheet.create({
   },
   timeButtonTextSelected: {
     color: '#FFFFFF',
+  },
+  customSubLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: Colors.ink3,
+    marginTop: 2,
+    letterSpacing: 0.2,
+  },
+  customSubLabelSelected: {
+    color: 'rgba(255,255,255,0.72)',
   },
   customLink: {
     height: 36,
