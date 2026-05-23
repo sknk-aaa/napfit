@@ -1,9 +1,7 @@
 import { Audio } from 'expo-av';
 import { setupAudioSession } from './session';
 
-// TODO: アラーム音源を assets/audio/alarm/ に配置したら差し替える
-// 例: const ALARM_FILE = require('../../assets/audio/alarm/alarm.mp3');
-const ALARM_FILE: Parameters<typeof Audio.Sound.createAsync>[0] | null = null;
+const ALARM_FILE = require('../../assets/audio/alarm/bell.mp3');
 
 // §9.3: フェードイン3秒 / 最大5分で自動停止
 const FADE_IN_STEPS = 30;

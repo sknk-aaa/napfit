@@ -1,9 +1,7 @@
 import { Audio } from 'expo-av';
 import { setupAudioSession } from './session';
 
-// TODO: BGM音源を assets/audio/bgm/ に配置したら差し替える
-// 例: const BGM_FILE = require('../../assets/audio/bgm/nature.mp3');
-const BGM_FILE: Parameters<typeof Audio.Sound.createAsync>[0] | null = null;
+const BGM_FILE = require('../../assets/audio/bgm/rain.mp3');
 
 let _sound: Audio.Sound | null = null;
 
