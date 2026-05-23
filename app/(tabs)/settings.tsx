@@ -189,12 +189,12 @@ export default function SettingsScreen() {
           <SettingRow
             icon="🔒"
             label="プライバシーポリシー"
-            onPress={() => Linking.openURL('https://example.com/privacy')}
+            onPress={() => Linking.openURL('https://sknk-aaa.github.io/napfit/privacy.html')}
           />
           <SettingRow
             icon="📄"
             label="利用規約"
-            onPress={() => Linking.openURL('https://example.com/terms')}
+            onPress={() => Linking.openURL('https://sknk-aaa.github.io/napfit/terms.html')}
           />
           <SettingRow
             icon="ℹ️"
