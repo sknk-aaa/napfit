@@ -49,8 +49,7 @@
           "icon": "./assets/images/icon.png",
           "color": "#5B9BD5"
         }
-      ],
-      "react-native-purchases"
+      ]
     ],
     "experiments": {
       "typedRoutes": true
