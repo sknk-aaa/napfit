@@ -17,7 +17,6 @@ let _autoStopTimer: ReturnType<typeof setTimeout> | null = null;
 export async function startAlarm(): Promise<void> {
   const id = (await AsyncStorage.getItem('settings:alarm_sound_id')) ?? 'bell';
   const file = ALARM_SOURCES[id] ?? DEFAULT_ALARM;
-  if (!file) return;
 
   await setupAudioSession();
   await stopAlarm();
