@@ -1,7 +1,7 @@
 import Purchases, { LOG_LEVEL, PurchasesPackage } from 'react-native-purchases';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_KEY_IOS = 'appl_REPLACE_WITH_YOUR_KEY';
+const API_KEY_IOS = 'appl_ZoBpkBbwboBDiQLJWofAYIHAtNT';
 
 const KEYS = {
   entitlementActive: 'pro:entitlement_active',
