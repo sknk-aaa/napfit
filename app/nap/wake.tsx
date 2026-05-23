@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Image,
+  ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -17,10 +19,44 @@ import type { NapResult } from '@/src/types';
 
 type Phase = 'alarm' | 'record';
 
-const RESULTS: { result: NapResult; label: string; desc: string; bg: string; ink: string; face: string }[] = [
-  { result: 'fresh',    label: 'すっきり', desc: 'よく休めた気がする',  bg: Colors.freshBg,    ink: Colors.freshInk,    face: '😊' },
-  { result: 'normal',   label: '普通',     desc: 'ふつう',              bg: Colors.normalBg,   ink: Colors.normalInk,   face: '😐' },
-  { result: 'sluggish', label: 'だるい',   desc: 'まだ眠い・重い感じ', bg: Colors.sluggishBg, ink: Colors.sluggishInk, face: '😞' },
+type RecordItem = {
+  result: NapResult;
+  label: string;
+  desc: string;
+  image: ImageSourcePropType;
+  bg: string;
+  accent: string;
+  ink: string;
+};
+
+const RECORD_ITEMS: RecordItem[] = [
+  {
+    result: 'fresh',
+    label: 'すっきり',
+    desc: 'よく休めた！',
+    image: require('@/assets/images/sheep/fresh.png'),
+    bg: '#F0FBF1',
+    accent: '#4CAF50',
+    ink: Colors.freshInk,
+  },
+  {
+    result: 'normal',
+    label: 'ふつう',
+    desc: 'まあまあかな',
+    image: require('@/assets/images/sheep/normal.png'),
+    bg: '#FFFCF0',
+    accent: '#FFC107',
+    ink: '#C47A00',
+  },
+  {
+    result: 'sluggish',
+    label: 'だるい',
+    desc: 'まだ眠い…',
+    image: require('@/assets/images/sheep/sluggish.png'),
+    bg: '#FFF2F5',
+    accent: '#EF9A9A',
+    ink: Colors.sluggishInk,
+  },
 ];
 
 export default function NapWakeScreen() {
@@ -72,7 +108,7 @@ export default function NapWakeScreen() {
       {phase === 'alarm' ? (
         <AlarmPhase onStop={handleStopAlarm} onSkip={handleSkip} processing={processing} />
       ) : (
-        <RecordPhase onResult={handleResult} processing={processing} />
+        <RecordPhase onResult={handleResult} onSkip={handleSkip} processing={processing} />
       )}
 
       <Animated.View style={[styles.toast, { opacity: toastOpacity }]} pointerEvents="none">
@@ -121,39 +157,76 @@ function AlarmPhase({
 
 function RecordPhase({
   onResult,
+  onSkip,
   processing,
 }: {
   onResult: (r: NapResult) => void;
+  onSkip: () => void;
   processing: boolean;
 }) {
+  const scales = useRef(RECORD_ITEMS.map(() => new Animated.Value(1))).current;
+
+  function pressIn(i: number) {
+    Animated.spring(scales[i], {
+      toValue: 0.96,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 0,
+    }).start();
+  }
+
+  function pressOut(i: number) {
+    Animated.spring(scales[i], {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 30,
+      bounciness: 7,
+    }).start();
+  }
+
   return (
-    <View style={styles.phaseWrap}>
-      <View style={styles.recordHeader}>
-        <Text style={styles.recordTitle}>起きた感じを教えてください</Text>
-        <Text style={styles.recordSub}>今日のコンディションを記録しましょう</Text>
+    <View style={recordStyles.container}>
+      <View style={recordStyles.header}>
+        <Text style={recordStyles.title}>起きた感じは？</Text>
+        <Text style={recordStyles.subtitle}>今日のコンディションを教えてください</Text>
       </View>
 
-      <View style={styles.resultCards}>
-        {RESULTS.map(({ result, label, desc, bg, ink, face }) => (
-          <TouchableOpacity
-            key={result}
-            style={[styles.resultCard, { backgroundColor: bg }]}
-            onPress={() => onResult(result)}
-            disabled={processing}
-            activeOpacity={0.72}
-          >
-            <View style={[styles.faceCircle, { backgroundColor: ink }]}>
-              <Text style={styles.faceEmoji}>{face}</Text>
-            </View>
-            <View style={styles.resultContent}>
-              <Text style={[styles.resultLabel, { color: ink }]}>{label}</Text>
-              <Text style={styles.resultDesc}>{desc}</Text>
-            </View>
-          </TouchableOpacity>
+      <View style={recordStyles.cards}>
+        {RECORD_ITEMS.map((item, i) => (
+          <Animated.View key={item.result} style={{ transform: [{ scale: scales[i] }] }}>
+            <TouchableOpacity
+              style={[recordStyles.card, { backgroundColor: item.bg }]}
+              onPress={() => onResult(item.result)}
+              onPressIn={() => pressIn(i)}
+              onPressOut={() => pressOut(i)}
+              disabled={processing}
+              activeOpacity={1}
+            >
+              <View style={[recordStyles.stripe, { backgroundColor: item.accent }]} />
+              <View style={recordStyles.sheepWrap}>
+                <Image
+                  source={item.image}
+                  style={recordStyles.sheepImg}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={recordStyles.textBlock}>
+                <Text style={[recordStyles.label, { color: item.ink }]}>{item.label}</Text>
+                <Text style={recordStyles.desc}>{item.desc}</Text>
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
         ))}
       </View>
 
-      <Text style={styles.resultNote}>記録すると、あなたに合う仮眠時間が見えてきます</Text>
+      <TouchableOpacity
+        onPress={onSkip}
+        style={recordStyles.skipBtn}
+        activeOpacity={0.6}
+        disabled={processing}
+      >
+        <Text style={recordStyles.skipText}>スキップ（記録しない）</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -227,63 +300,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // フェーズ2
-  recordHeader: {
-    paddingTop: 32,
-    paddingBottom: 24,
-    alignItems: 'center',
-    gap: 6,
-  },
-  recordTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.ink,
-    letterSpacing: -0.2,
-  },
-  recordSub: {
-    fontSize: 12.5,
-    color: Colors.ink2,
-  },
-  resultCards: {
-    gap: 12,
-  },
-  resultCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 16,
-    padding: 14,
-    gap: 14,
-  },
-  faceCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  faceEmoji: {
-    fontSize: 22,
-  },
-  resultContent: {
-    flex: 1,
-    gap: 3,
-  },
-  resultLabel: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  resultDesc: {
-    fontSize: 11.5,
-    color: Colors.ink2,
-  },
-  resultNote: {
-    marginTop: 24,
-    textAlign: 'center',
-    fontSize: 11.5,
-    color: Colors.ink3,
-    lineHeight: 18,
-  },
-
   // トースト
   toast: {
     position: 'absolute',
@@ -305,5 +321,86 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
     letterSpacing: 0.2,
+  },
+});
+
+const recordStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  header: {
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: Colors.ink,
+    letterSpacing: -0.5,
+    lineHeight: 34,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: Colors.ink3,
+    marginTop: 4,
+  },
+  cards: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 10,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 108,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  stripe: {
+    width: 5,
+    alignSelf: 'stretch',
+  },
+  sheepWrap: {
+    width: 96,
+    height: 96,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 8,
+  },
+  sheepImg: {
+    width: 90,
+    height: 90,
+  },
+  textBlock: {
+    flex: 1,
+    paddingRight: 18,
+    gap: 5,
+  },
+  label: {
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+    lineHeight: 29,
+  },
+  desc: {
+    fontSize: 12.5,
+    color: Colors.ink2,
+    fontWeight: '500',
+  },
+  skipBtn: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingBottom: 8,
+  },
+  skipText: {
+    fontSize: 13,
+    color: Colors.ink3,
+    fontWeight: '500',
   },
 });
