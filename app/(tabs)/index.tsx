@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { getCompletedRecords, updateNapRecord } from '@/src/db/queries';
 import { getRecommendedDuration, getStandardDurationStats } from '@/src/nap/statistics';
@@ -27,6 +29,13 @@ export default function HomeScreen() {
   const [recoveryRecord, setRecoveryRecord] = useState<NapRecord | null>(null);
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customDuration, setCustomDuration] = useState(25);
+
+  // 初回マウント時のみオンボーディング確認（Stack が描画済みなので安全）
+  useEffect(() => {
+    AsyncStorage.getItem('app:onboarding_completed').then((val) => {
+      if (val !== 'true') router.replace('/onboarding');
+    });
+  }, []);
 
   useFocusEffect(
     useCallback(() => {

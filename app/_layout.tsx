@@ -3,8 +3,6 @@ import { useFonts } from 'expo-font';
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { setupNotificationHandler } from '@/src/notifications/schedule';
 import { loadProStatus } from '@/src/pro/gate';
 import { initRevenueCat, isPro } from '@/src/pro/revenuecat';
@@ -35,13 +33,6 @@ export default function RootLayout() {
     if (!loaded) return;
 
     (async () => {
-      // オンボーディング確認とスプラッシュ非表示（最優先・ネットワーク待ちなし）
-      let shouldOnboard = false;
-      try {
-        const onboarded = await AsyncStorage.getItem('app:onboarding_completed');
-        shouldOnboard = onboarded !== 'true';
-      } catch {}
-
       // キャッシュ済みのPro状態だけ読む（ネットワーク通信なし）
       try {
         await loadProStatus();
@@ -49,10 +40,6 @@ export default function RootLayout() {
 
       setAppReady(true);
       await SplashScreen.hideAsync();
-
-      if (shouldOnboard) {
-        router.replace('/onboarding');
-      }
 
       // RevenueCatの同期はバックグラウンドで非同期に実行
       initRevenueCat()
