@@ -11,20 +11,16 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { stopAlarm } from '@/src/audio/alarm';
 import { updateNapRecord } from '@/src/db/queries';
+import { Colors } from '@/src/theme/colors';
+import Sheep from '@/src/components/Sheep';
 import type { NapResult } from '@/src/types';
 
 type Phase = 'alarm' | 'record';
 
-const RESULTS: {
-  result: NapResult;
-  label: string;
-  desc: string;
-  color: string;
-  bg: string;
-}[] = [
-  { result: 'fresh',    label: 'すっきり', desc: 'よく休めた気がする',  color: '#4CAF50', bg: '#F1F8F2' },
-  { result: 'normal',   label: '普通',     desc: 'ふつう',              color: '#F5A623', bg: '#FFFBF0' },
-  { result: 'sluggish', label: 'だるい',   desc: 'まだ眠い・重い感じ', color: '#F44336', bg: '#FEF5F5' },
+const RESULTS: { result: NapResult; label: string; desc: string; bg: string; ink: string; face: string }[] = [
+  { result: 'fresh',    label: 'すっきり', desc: 'よく休めた気がする',  bg: Colors.freshBg,    ink: Colors.freshInk,    face: '😊' },
+  { result: 'normal',   label: '普通',     desc: 'ふつう',              bg: Colors.normalBg,   ink: Colors.normalInk,   face: '😐' },
+  { result: 'sluggish', label: 'だるい',   desc: 'まだ眠い・重い感じ', bg: Colors.sluggishBg, ink: Colors.sluggishInk, face: '😞' },
 ];
 
 export default function NapWakeScreen() {
@@ -69,7 +65,10 @@ export default function NapWakeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: phase === 'alarm' ? Colors.cream : Colors.background }]}
+      edges={['top', 'bottom']}
+    >
       {phase === 'alarm' ? (
         <AlarmPhase onStop={handleStopAlarm} onSkip={handleSkip} processing={processing} />
       ) : (
@@ -83,8 +82,6 @@ export default function NapWakeScreen() {
   );
 }
 
-// ---- フェーズ1: アラーム鳴動 ----
-
 function AlarmPhase({
   onStop,
   onSkip,
@@ -97,13 +94,11 @@ function AlarmPhase({
   return (
     <View style={styles.phaseWrap}>
       <View style={styles.alarmMain}>
-        <View style={styles.sheepCircle}>
-          <Text style={styles.sheepEmoji}>🐑</Text>
-        </View>
         <View style={styles.greetingBlock}>
           <Text style={styles.greeting}>おはようございます！</Text>
           <Text style={styles.greetingSub}>起きる時間です</Text>
         </View>
+        <Sheep pose="alert" size={160} />
       </View>
 
       <View style={styles.alarmBottom}>
@@ -118,13 +113,11 @@ function AlarmPhase({
         >
           <Text style={styles.skipLinkText}>スキップ（記録しない）</Text>
         </TouchableOpacity>
-        <Text style={styles.skipNote}>スキップしても、仮眠の記録は残ります</Text>
+        <Text style={styles.skipNote}>※スキップしても、仮眠の記録は残りません</Text>
       </View>
     </View>
   );
 }
-
-// ---- フェーズ2: 3択記録 ----
 
 function RecordPhase({
   onResult,
@@ -141,7 +134,7 @@ function RecordPhase({
       </View>
 
       <View style={styles.resultCards}>
-        {RESULTS.map(({ result, label, desc, color, bg }) => (
+        {RESULTS.map(({ result, label, desc, bg, ink, face }) => (
           <TouchableOpacity
             key={result}
             style={[styles.resultCard, { backgroundColor: bg }]}
@@ -149,9 +142,11 @@ function RecordPhase({
             disabled={processing}
             activeOpacity={0.72}
           >
-            <View style={[styles.resultAccent, { backgroundColor: color }]} />
+            <View style={[styles.faceCircle, { backgroundColor: ink }]}>
+              <Text style={styles.faceEmoji}>{face}</Text>
+            </View>
             <View style={styles.resultContent}>
-              <Text style={[styles.resultLabel, { color }]}>{label}</Text>
+              <Text style={[styles.resultLabel, { color: ink }]}>{label}</Text>
               <Text style={styles.resultDesc}>{desc}</Text>
             </View>
           </TouchableOpacity>
@@ -163,16 +158,13 @@ function RecordPhase({
   );
 }
 
-// ---- スタイル ----
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   phaseWrap: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
   },
 
   // フェーズ1
@@ -180,37 +172,22 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 28,
-  },
-  sheepCircle: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    backgroundColor: '#F5F9FC',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#A8CCD8',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
-    elevation: 3,
-  },
-  sheepEmoji: {
-    fontSize: 52,
+    gap: 32,
   },
   greetingBlock: {
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   greeting: {
     fontSize: 26,
-    fontWeight: '700',
-    color: '#2C2C2C',
+    fontWeight: '800',
+    color: Colors.ink,
     letterSpacing: -0.3,
   },
   greetingSub: {
-    fontSize: 16,
-    color: '#888',
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.ink2,
   },
   alarmBottom: {
     paddingBottom: 12,
@@ -219,52 +196,53 @@ const styles = StyleSheet.create({
   },
   stopBtn: {
     width: '100%',
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#5B9BD5',
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: Colors.yellowBtn,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#5B9BD5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowColor: Colors.yellowBtn,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
     elevation: 5,
   },
   stopBtnText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.yellowBtnText,
+    letterSpacing: 0.2,
   },
   skipLink: {
     paddingVertical: 4,
   },
   skipLinkText: {
-    fontSize: 14,
-    color: '#AAAAAA',
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.ink2,
   },
   skipNote: {
-    fontSize: 11,
-    color: '#CCCCCC',
+    fontSize: 10.5,
+    color: Colors.ink3,
     textAlign: 'center',
   },
 
   // フェーズ2
   recordHeader: {
-    paddingTop: 44,
-    paddingBottom: 28,
+    paddingTop: 32,
+    paddingBottom: 24,
     alignItems: 'center',
     gap: 6,
   },
   recordTitle: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#2C2C2C',
-    letterSpacing: -0.3,
+    fontWeight: '800',
+    color: Colors.ink,
+    letterSpacing: -0.2,
   },
   recordSub: {
-    fontSize: 13,
-    color: '#999',
+    fontSize: 12.5,
+    color: Colors.ink2,
   },
   resultCards: {
     gap: 12,
@@ -272,32 +250,37 @@ const styles = StyleSheet.create({
   resultCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
-    overflow: 'hidden',
-    height: 72,
+    borderRadius: 16,
+    padding: 14,
+    gap: 14,
   },
-  resultAccent: {
-    width: 6,
-    alignSelf: 'stretch',
+  faceCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  faceEmoji: {
+    fontSize: 22,
   },
   resultContent: {
     flex: 1,
-    paddingHorizontal: 18,
     gap: 3,
   },
   resultLabel: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
   },
   resultDesc: {
-    fontSize: 12,
-    color: '#AAA',
+    fontSize: 11.5,
+    color: Colors.ink2,
   },
   resultNote: {
     marginTop: 24,
     textAlign: 'center',
-    fontSize: 12,
-    color: '#BBBBBB',
+    fontSize: 11.5,
+    color: Colors.ink3,
     lineHeight: 18,
   },
 
@@ -307,7 +290,7 @@ const styles = StyleSheet.create({
     bottom: 52,
     left: 24,
     right: 24,
-    backgroundColor: '#2C3E4A',
+    backgroundColor: Colors.ink,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

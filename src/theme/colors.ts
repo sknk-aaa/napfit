@@ -1,30 +1,55 @@
 export const Colors = {
-  background: '#FFFFFF',
-  surface: '#F8F9FA',
-  primary: '#5B9BD5',
-  primaryDark: '#3A7DBF',
+  // ベース
+  background: '#F5F0E8',
+  backgroundAlt: '#EFE9DF',
+  card: '#FFFFFF',
+  primary: '#5E7BA8',
+  primaryDark: '#4E6B95',
+  primarySoft: '#E2EAF3',
+  primaryChip: '#D4DFEC',
 
-  napBackground: '#E8F4F8',
+  // 仮眠中
+  napBackground: '#5E7BA8',
 
-  text: '#2C2C2C',
-  textSecondary: '#666666',
-  textTertiary: '#999999',
+  // 起床
+  cream: '#F6E9CC',
+  yellowBtn: '#ECC97A',
+  yellowBtnText: '#5C4A1F',
 
-  border: '#E5E5E5',
+  // テキスト
+  ink: '#2E3A4F',
+  ink2: '#6B7585',
+  ink3: '#9BA3B0',
+  ink4: '#C8CEDA',
+  divider: '#ECE6DD',
 
-  fresh: '#4CAF50',
-  freshLight: '#E8F5E9',
-  normal: '#FFC107',
-  normalLight: '#FFF8E1',
-  sluggish: '#F44336',
-  sluggishLight: '#FFEBEE',
+  // 結果
+  freshBg: '#E2ECDA',
+  freshInk: '#6E8A5E',
+  normalBg: '#F2E8CC',
+  normalInk: '#A0833E',
+  sluggishBg: '#F0DBD3',
+  sluggishInk: '#A86F62',
 
+  // タブバー
   tabBar: '#FFFFFF',
-  tabBarBorder: '#E5E5E5',
-  tabActive: '#5B9BD5',
-  tabInactive: '#AAAAAA',
+  tabBarBorder: '#ECE6DD',
+  tabActive: '#5E7BA8',
+  tabInactive: '#9BA3B0',
 
-  alarmBackground: '#FFF8E1',
+  // 後方互換
+  text: '#2E3A4F',
+  textSecondary: '#6B7585',
+  textTertiary: '#9BA3B0',
+  surface: '#EFE9DF',
+  border: '#ECE6DD',
+  fresh: '#6E8A5E',
+  freshLight: '#E2ECDA',
+  normal: '#A0833E',
+  normalLight: '#F2E8CC',
+  sluggish: '#A86F62',
+  sluggishLight: '#F0DBD3',
+  alarmBackground: '#F6E9CC',
 } as const;
 
 export type ColorKey = keyof typeof Colors;

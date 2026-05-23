@@ -18,6 +18,8 @@ import { startBgm, stopBgm, resumeBgm, hasBgm } from '@/src/audio/bgm';
 import { startAlarm, stopAlarm } from '@/src/audio/alarm';
 import { getRemainingSeconds, formatTime } from '@/src/nap/timer';
 import { scheduleAlarmNotification, cancelNotification } from '@/src/notifications/schedule';
+import { Colors } from '@/src/theme/colors';
+import Sheep from '@/src/components/Sheep';
 
 export default function NapActiveScreen() {
   const { duration } = useLocalSearchParams<{ duration: string }>();
@@ -181,10 +183,7 @@ export default function NapActiveScreen() {
 
       {/* メインエリア */}
       <View style={styles.main}>
-        {/* 羊イラスト(placeholder) */}
-        <View style={styles.sheepCircle}>
-          <Text style={styles.sheepEmoji}>🐑</Text>
-        </View>
+        <Sheep pose="sleep" size={120} />
 
         {/* タイマー */}
         <View style={styles.timerBlock}>
@@ -208,7 +207,7 @@ export default function NapActiveScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E8F4F8',
+    backgroundColor: Colors.napBackground,
   },
   header: {
     flexDirection: 'row',
@@ -221,20 +220,20 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeBtnText: {
     fontSize: 15,
-    color: '#5B7A8A',
+    color: 'rgba(255,255,255,0.9)',
     fontWeight: '600',
   },
   keepOpenText: {
     flex: 1,
     textAlign: 'center',
     fontSize: 12,
-    color: '#7AA5B8',
+    color: 'rgba(255,255,255,0.82)',
     fontWeight: '500',
     letterSpacing: 0.2,
   },
@@ -244,49 +243,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 36,
   },
-  sheepCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#7BBDD4',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
-    elevation: 4,
-  },
-  sheepEmoji: {
-    fontSize: 58,
-  },
   timerBlock: {
     alignItems: 'center',
     gap: 10,
   },
   timerText: {
-    fontSize: 72,
-    fontWeight: '700',
-    color: '#2C3E4A',
-    letterSpacing: 3,
+    fontSize: 76,
+    fontWeight: '300',
+    color: '#FFFFFF',
+    letterSpacing: -2,
     fontVariant: ['tabular-nums'],
   },
   bgmLabel: {
-    fontSize: 13,
-    color: '#5B9BD5',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.78)',
     fontWeight: '500',
   },
   bottom: {
     alignItems: 'center',
-    paddingBottom: 16,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
   },
   stopBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 36,
+    width: '100%',
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   stopBtnText: {
-    fontSize: 15,
-    color: '#E57373',
-    fontWeight: '600',
+    fontSize: 14,
+    color: Colors.ink,
+    fontWeight: '700',
   },
 });
