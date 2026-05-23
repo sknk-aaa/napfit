@@ -1,8 +1,8 @@
-import { Image, ImageStyle } from 'react-native';
+import { Image, ImageSourcePropType, ImageStyle } from 'react-native';
 
 type Pose = 'smile' | 'sleep' | 'pillow' | 'lie' | 'alert' | 'roll' | 'read';
 
-const SOURCES: Record<Pose, ReturnType<typeof require>> = {
+const SOURCES: Record<Pose, ImageSourcePropType> = {
   smile:  require('@/assets/images/sheep/smile.png'),
   sleep:  require('@/assets/images/sheep/sleep.png'),
   pillow: require('@/assets/images/sheep/pillow.png'),

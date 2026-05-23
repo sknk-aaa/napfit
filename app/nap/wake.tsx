@@ -44,7 +44,7 @@ export default function NapWakeScreen() {
         endedAt: new Date().toISOString(),
       });
     }
-    router.replace('/(tabs)/');
+    router.replace('/(tabs)');
   }
 
   async function handleResult(result: NapResult) {
@@ -61,7 +61,7 @@ export default function NapWakeScreen() {
       Animated.timing(toastOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
       Animated.delay(820),
       Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start(() => router.replace('/(tabs)/'));
+    ]).start(() => router.replace('/(tabs)'));
   }
 
   return (

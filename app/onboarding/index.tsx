@@ -63,13 +63,13 @@ export default function OnboardingScreen() {
     await Notifications.requestPermissionsAsync();
     await AsyncStorage.setItem('app:onboarding_completed', 'true');
     await AsyncStorage.setItem('app:first_launch_at', new Date().toISOString());
-    router.replace('/(tabs)/');
+    router.replace('/(tabs)');
   }
 
   function handleSkip() {
     AsyncStorage.setItem('app:onboarding_completed', 'true');
     AsyncStorage.setItem('app:first_launch_at', new Date().toISOString());
-    router.replace('/(tabs)/');
+    router.replace('/(tabs)');
   }
 
   return (

@@ -163,7 +163,7 @@ export default function NapActiveScreen() {
                 endedAt: new Date().toISOString(),
               });
             }
-            router.replace('/(tabs)/');
+            router.replace('/(tabs)');
           },
         },
       ]
