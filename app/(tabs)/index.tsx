@@ -10,35 +10,49 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 
-import { getCompletedRecords, getInProgressRecords } from '@/src/db/queries';
+import { getCompletedRecords, updateNapRecord } from '@/src/db/queries';
 import { getRecommendedDuration, getStandardDurationStats } from '@/src/nap/statistics';
 import { generateComment } from '@/src/comments/generator';
+import { detectRecoveryRecord, formatRecoveryAge } from '@/src/nap/recovery';
 import { Colors } from '@/src/theme/colors';
 import Sheep from '@/src/components/Sheep';
 import type { DurationStats } from '@/src/nap/statistics';
-import type { NapRecord } from '@/src/types';
+import type { NapRecord, NapResult } from '@/src/types';
 
 const STANDARD_DURATIONS = [15, 20, 30] as const;
 
 export default function HomeScreen() {
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [records, setRecords] = useState<NapRecord[]>([]);
-  const [hasInProgress, setHasInProgress] = useState(false);
+  const [recoveryRecord, setRecoveryRecord] = useState<NapRecord | null>(null);
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customDuration, setCustomDuration] = useState(25);
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [completed, inProgress] = await Promise.all([
+        const [completed, recovery] = await Promise.all([
           getCompletedRecords(),
-          getInProgressRecords(),
+          detectRecoveryRecord(),
         ]);
         setRecords(completed);
-        setHasInProgress(inProgress.length > 0);
+        setRecoveryRecord(recovery);
       })();
     }, [])
   );
+
+  async function handleRecovery(result: NapResult | null) {
+    if (!recoveryRecord) return;
+    const now = new Date().toISOString();
+    if (result) {
+      await updateNapRecord(recoveryRecord.id, { status: 'recovered', result, endedAt: now });
+    } else {
+      await updateNapRecord(recoveryRecord.id, { status: 'skipped', endedAt: now });
+    }
+    const completed = await getCompletedRecords();
+    setRecords(completed);
+    setRecoveryRecord(null);
+  }
 
   const recommendedDuration = getRecommendedDuration(records);
   const standardStats = getStandardDurationStats(records);
@@ -47,7 +61,7 @@ export default function HomeScreen() {
   const isCustomSelected =
     selectedDuration !== null &&
     !(STANDARD_DURATIONS as readonly number[]).includes(selectedDuration);
-  const canStart = selectedDuration !== null && !hasInProgress;
+  const canStart = selectedDuration !== null && recoveryRecord === null;
 
   function handleStartNap() {
     if (!canStart || selectedDuration === null) return;
@@ -61,6 +75,11 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 救済UXバナー */}
+      {recoveryRecord && (
+        <RecoveryBanner record={recoveryRecord} onSelect={handleRecovery} />
+      )}
+
       {/* ヘッダー */}
       <View style={styles.header}>
         <Text style={styles.greeting}>こんにちは！</Text>
@@ -126,8 +145,8 @@ export default function HomeScreen() {
 
       {/* 仮眠をはじめるボタン */}
       <View style={styles.bottom}>
-        {hasInProgress && (
-          <Text style={styles.inProgressNote}>前回の仮眠が未記録です。上のバナーから記録してください。</Text>
+        {recoveryRecord && (
+          <Text style={styles.inProgressNote}>上のバナーで前回の記録を完了してから始めてください。</Text>
         )}
         <TouchableOpacity
           style={[styles.startButton, canStart && styles.startButtonActive]}
@@ -152,6 +171,50 @@ export default function HomeScreen() {
 }
 
 // ---- サブコンポーネント ----
+
+function RecoveryBanner({
+  record,
+  onSelect,
+}: {
+  record: NapRecord;
+  onSelect: (result: NapResult | null) => void;
+}) {
+  const age = formatRecoveryAge(record.startedAt, record.napDurationMinutes);
+  return (
+    <View style={bannerStyles.container}>
+      <Text style={bannerStyles.title}>
+        {age}の{record.napDurationMinutes}分仮眠が記録されていません
+      </Text>
+      <Text style={bannerStyles.question}>どうでしたか?</Text>
+      <View style={bannerStyles.buttons}>
+        <TouchableOpacity
+          style={[bannerStyles.btn, { backgroundColor: Colors.freshBg }]}
+          onPress={() => onSelect('fresh')}
+          activeOpacity={0.7}
+        >
+          <Text style={[bannerStyles.btnText, { color: Colors.freshInk }]}>😊 すっきり</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[bannerStyles.btn, { backgroundColor: Colors.normalBg }]}
+          onPress={() => onSelect('normal')}
+          activeOpacity={0.7}
+        >
+          <Text style={[bannerStyles.btnText, { color: Colors.normalInk }]}>😐 普通</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[bannerStyles.btn, { backgroundColor: Colors.sluggishBg }]}
+          onPress={() => onSelect('sluggish')}
+          activeOpacity={0.7}
+        >
+          <Text style={[bannerStyles.btnText, { color: Colors.sluggishInk }]}>😞 だるい</Text>
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity onPress={() => onSelect(null)} activeOpacity={0.7}>
+        <Text style={bannerStyles.skip}>スキップ</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 function BarChart({
   stats,
@@ -424,6 +487,49 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.2,
+  },
+});
+
+const bannerStyles = StyleSheet.create({
+  container: {
+    backgroundColor: Colors.cream,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.yellowBtn,
+  },
+  title: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.ink,
+    marginBottom: 2,
+  },
+  question: {
+    fontSize: 11.5,
+    color: Colors.ink2,
+    marginBottom: 10,
+  },
+  buttons: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 8,
+  },
+  btn: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 7,
+    alignItems: 'center',
+  },
+  btnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  skip: {
+    fontSize: 11,
+    color: Colors.ink3,
+    textAlign: 'center',
   },
 });
 

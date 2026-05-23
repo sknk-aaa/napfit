@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -5,51 +6,108 @@ import {
   ScrollView,
   StyleSheet,
   Linking,
+  Alert,
+  Modal,
+  Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Colors } from '@/src/theme/colors';
 import Sheep from '@/src/components/Sheep';
+import { isProActive, setProActive } from '@/src/pro/gate';
+import { restorePurchases } from '@/src/pro/revenuecat';
 
-function ChevronRight() {
-  return (
-    <View style={styles.chevron}>
-      <Text style={styles.chevronText}>›</Text>
-    </View>
-  );
-}
+const BGM_OPTIONS = [
+  { id: 'rain', label: 'やさしい雨音' },
+  { id: 'piano', label: 'やさしいピアノ' },
+  { id: 'white', label: 'ホワイトノイズ' },
+] as const;
 
-interface SettingRow {
-  icon: string;
-  label: string;
-  detail?: string;
-  onPress?: () => void;
-  isPro?: boolean;
-}
+const ALARM_OPTIONS = [
+  { id: 'bell', label: 'シンプルベル' },
+  { id: 'chime', label: 'やわらかチャイム' },
+  { id: 'nature', label: '自然の音' },
+] as const;
+
+type BgmId = typeof BGM_OPTIONS[number]['id'];
+type AlarmId = typeof ALARM_OPTIONS[number]['id'];
 
 export default function SettingsScreen() {
-  const mainRows: SettingRow[] = [
-    { icon: '🔔', label: '通知設定',      detail: '許可されています' },
-    { icon: '🎵', label: 'BGM選択',       detail: 'やさしいピアノ' },
-    { icon: '⏰', label: 'アラーム音',    detail: 'シンプルベル', isPro: true },
-    { icon: '🌗', label: 'テーマ',        detail: 'ライトモード',  isPro: true },
-    { icon: '👑', label: 'NapFit Pro',    detail: '機能をアップグレード' },
-    { icon: '🔄', label: '購入を復元',    detail: 'Restore Purchases' },
-  ];
+  const [notifStatus, setNotifStatus] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
+  const [bgmId, setBgmId] = useState<BgmId>('piano');
+  const [alarmId, setAlarmId] = useState<AlarmId>('bell');
+  const [bgmModalVisible, setBgmModalVisible] = useState(false);
+  const [alarmModalVisible, setAlarmModalVisible] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const isPro = isProActive();
 
-  const infoRows: SettingRow[] = [
-    {
-      icon: '🔒',
-      label: 'プライバシーポリシー',
-      onPress: () => Linking.openURL('https://example.com/privacy'),
-    },
-    {
-      icon: '📄',
-      label: '利用規約',
-      onPress: () => Linking.openURL('https://example.com/terms'),
-    },
-    { icon: 'ℹ️', label: 'アプリ情報', detail: 'v1.0.0' },
-  ];
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const { status } = await Notifications.getPermissionsAsync();
+        setNotifStatus(status as 'granted' | 'denied' | 'undetermined');
+        const storedBgm = await AsyncStorage.getItem('settings:bgm_id');
+        if (storedBgm) setBgmId(storedBgm as BgmId);
+        const storedAlarm = await AsyncStorage.getItem('settings:alarm_sound_id');
+        if (storedAlarm) setAlarmId(storedAlarm as AlarmId);
+      })();
+    }, [])
+  );
+
+  async function handleNotifRow() {
+    if (notifStatus === 'denied') {
+      Alert.alert(
+        '通知が許可されていません',
+        '設定アプリから通知を許可してください。',
+        [
+          { text: 'キャンセル', style: 'cancel' },
+          { text: '設定を開く', onPress: () => Linking.openSettings() },
+        ]
+      );
+    } else if (notifStatus === 'undetermined') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      setNotifStatus(status as 'granted' | 'denied' | 'undetermined');
+    }
+  }
+
+  async function handleSelectBgm(id: BgmId) {
+    setBgmId(id);
+    await AsyncStorage.setItem('settings:bgm_id', id);
+    setBgmModalVisible(false);
+  }
+
+  async function handleSelectAlarm(id: AlarmId) {
+    setAlarmId(id);
+    await AsyncStorage.setItem('settings:alarm_sound_id', id);
+    setAlarmModalVisible(false);
+  }
+
+  async function handleRestore() {
+    setRestoring(true);
+    const success = await restorePurchases();
+    setRestoring(false);
+    if (success) {
+      setProActive(true);
+      Alert.alert('復元しました', 'Pro機能が有効になりました。');
+    } else {
+      Alert.alert('復元できませんでした', '購入履歴が見つかりませんでした。');
+    }
+  }
+
+  const notifLabel =
+    notifStatus === 'granted'
+      ? '許可されています'
+      : notifStatus === 'denied'
+      ? '許可されていません'
+      : '未設定';
+
+  const bgmLabel = BGM_OPTIONS.find((b) => b.id === bgmId)?.label ?? '—';
+  const alarmLabel = ALARM_OPTIONS.find((a) => a.id === alarmId)?.label ?? '—';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -62,48 +120,143 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* メイン設定 */}
         <View style={styles.listCard}>
-          {mainRows.map((row, i) => (
-            <SettingRowItem
-              key={row.label}
-              row={row}
-              isLast={i === mainRows.length - 1}
-            />
-          ))}
+          <SettingRow
+            icon="🔔"
+            label="通知設定"
+            detail={notifLabel}
+            onPress={notifStatus !== 'granted' ? handleNotifRow : undefined}
+          />
+          <SettingRow
+            icon="🎵"
+            label="BGM選択"
+            detail={bgmLabel}
+            onPress={() => setBgmModalVisible(true)}
+          />
+          <SettingRow
+            icon="⏰"
+            label="アラーム音"
+            detail={alarmLabel}
+            isPro
+            onPress={isPro ? () => setAlarmModalVisible(true) : () => router.push('/pro-modal')}
+          />
+          <SettingRow
+            icon="🌗"
+            label="テーマ"
+            detail="ライトモード"
+            isPro
+            onPress={() => router.push('/pro-modal')}
+            isLast
+          />
         </View>
 
-        {/* 情報・リンク */}
+        {/* Pro */}
         <View style={[styles.listCard, { marginTop: 14 }]}>
-          {infoRows.map((row, i) => (
-            <SettingRowItem
-              key={row.label}
-              row={row}
-              isLast={i === infoRows.length - 1}
+          {isPro ? (
+            <SettingRow
+              icon="👑"
+              label="NapFit Pro"
+              detail="ご利用中"
+              isLast
             />
-          ))}
+          ) : (
+            <>
+              <SettingRow
+                icon="👑"
+                label="NapFit Pro"
+                detail="機能をアップグレード"
+                onPress={() => router.push('/pro-modal')}
+              />
+              <SettingRow
+                icon="🔄"
+                label="購入を復元"
+                detail={restoring ? '復元中...' : 'Restore Purchases'}
+                onPress={handleRestore}
+                isLast
+              />
+            </>
+          )}
         </View>
 
-        {/* バージョン */}
+        {/* 情報 */}
+        <View style={[styles.listCard, { marginTop: 14 }]}>
+          <SettingRow
+            icon="📊"
+            label="分析ダッシュボード"
+            detail={isPro ? '' : 'Pro'}
+            isPro={!isPro}
+            onPress={() => isPro ? router.push('/analytics') : router.push('/pro-modal')}
+          />
+          <SettingRow
+            icon="🔒"
+            label="プライバシーポリシー"
+            onPress={() => Linking.openURL('https://example.com/privacy')}
+          />
+          <SettingRow
+            icon="📄"
+            label="利用規約"
+            onPress={() => Linking.openURL('https://example.com/terms')}
+          />
+          <SettingRow
+            icon="ℹ️"
+            label="アプリ情報"
+            detail="v1.0.0"
+            isLast
+          />
+        </View>
+
         <Text style={styles.version}>NapFit v1.0.0</Text>
       </ScrollView>
+
+      {/* BGM 選択モーダル */}
+      <SelectModal
+        visible={bgmModalVisible}
+        title="BGM を選択"
+        options={BGM_OPTIONS.map((b) => ({ id: b.id, label: b.label }))}
+        selectedId={bgmId}
+        onSelect={(id) => handleSelectBgm(id as BgmId)}
+        onClose={() => setBgmModalVisible(false)}
+      />
+
+      {/* アラーム音選択モーダル */}
+      <SelectModal
+        visible={alarmModalVisible}
+        title="アラーム音を選択"
+        options={ALARM_OPTIONS.map((a) => ({ id: a.id, label: a.label }))}
+        selectedId={alarmId}
+        onSelect={(id) => handleSelectAlarm(id as AlarmId)}
+        onClose={() => setAlarmModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
 
-function SettingRowItem({ row, isLast }: { row: SettingRow; isLast: boolean }) {
+function SettingRow({
+  icon,
+  label,
+  detail,
+  onPress,
+  isPro,
+  isLast,
+}: {
+  icon: string;
+  label: string;
+  detail?: string;
+  onPress?: () => void;
+  isPro?: boolean;
+  isLast?: boolean;
+}) {
   return (
     <TouchableOpacity
       style={[styles.row, !isLast && styles.rowBorder]}
-      onPress={row.onPress}
-      activeOpacity={row.onPress ? 0.65 : 1}
-      disabled={!row.onPress}
+      onPress={onPress}
+      activeOpacity={onPress ? 0.65 : 1}
+      disabled={!onPress}
     >
-      <Text style={styles.rowIcon}>{row.icon}</Text>
-      <Text style={styles.rowLabel}>{row.label}</Text>
-      {row.isPro && <ProBadge />}
-      {row.detail ? (
-        <Text style={styles.rowDetail}>{row.detail}</Text>
-      ) : null}
-      <ChevronRight />
+      <Text style={styles.rowIcon}>{icon}</Text>
+      <Text style={styles.rowLabel}>{label}</Text>
+      {isPro && <ProBadge />}
+      {detail ? <Text style={styles.rowDetail}>{detail}</Text> : null}
+      {onPress && <Text style={styles.chevron}>›</Text>}
     </TouchableOpacity>
   );
 }
@@ -113,6 +266,54 @@ function ProBadge() {
     <View style={styles.proBadge}>
       <Text style={styles.proBadgeText}>Pro</Text>
     </View>
+  );
+}
+
+function SelectModal({
+  visible,
+  title,
+  options,
+  selectedId,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  title: string;
+  options: { id: string; label: string }[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={modalStyles.backdrop} onPress={onClose}>
+        <Pressable style={modalStyles.card}>
+          <Text style={modalStyles.title}>{title}</Text>
+          {options.map((opt, i) => (
+            <TouchableOpacity
+              key={opt.id}
+              style={[
+                modalStyles.option,
+                i < options.length - 1 && modalStyles.optionBorder,
+                selectedId === opt.id && modalStyles.optionSelected,
+              ]}
+              onPress={() => onSelect(opt.id)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  modalStyles.optionText,
+                  selectedId === opt.id && modalStyles.optionTextSelected,
+                ]}
+              >
+                {opt.label}
+              </Text>
+              {selectedId === opt.id && <Text style={modalStyles.checkmark}>✓</Text>}
+            </TouchableOpacity>
+          ))}
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -133,6 +334,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     color: Colors.ink,
+    flex: 1,
   },
   scroll: {
     padding: 16,
@@ -176,13 +378,11 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   chevron: {
-    width: 16,
-    alignItems: 'center',
-  },
-  chevronText: {
     fontSize: 20,
     color: Colors.ink4,
     lineHeight: 22,
+    width: 16,
+    textAlign: 'center',
   },
   proBadge: {
     backgroundColor: Colors.primaryChip,
@@ -201,5 +401,58 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.ink3,
     marginTop: 24,
+  },
+});
+
+const modalStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  card: {
+    backgroundColor: Colors.card,
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 320,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: Colors.ink,
+    marginBottom: 12,
+  },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 13,
+  },
+  optionBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
+  },
+  optionSelected: {},
+  optionText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.ink,
+    fontWeight: '500',
+  },
+  optionTextSelected: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  checkmark: {
+    fontSize: 16,
+    color: Colors.primary,
+    fontWeight: '700',
   },
 });
