@@ -1,0 +1,1272 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NapFit — App Screens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=Inter:wght@300;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  body { font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<script type="text/babel">
+// ═══════════════════════════════════════════════════════════════
+// DESIGN CANVAS
+// ═══════════════════════════════════════════════════════════════
+const DC = {
+  bg: '#f0eee9',
+  grid: 'rgba(0,0,0,0.06)',
+  label: 'rgba(60,50,40,0.7)',
+  title: 'rgba(40,30,20,0.85)',
+  subtitle: 'rgba(60,50,40,0.6)',
+  font: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+};
+
+if (!document.getElementById('dc-styles')) {
+  const s = document.createElement('style');
+  s.id = 'dc-styles';
+  s.textContent = [
+    '.dc-editable{cursor:text;outline:none;white-space:nowrap;border-radius:3px;padding:0 2px;margin:0 -2px}',
+    '.dc-editable:focus{background:#fff;box-shadow:0 0 0 1.5px #c96442}',
+    '[data-dc-slot]{transition:transform .18s cubic-bezier(.2,.7,.3,1)}',
+    '[data-dc-slot].dc-dragging{transition:none;z-index:10;pointer-events:none}',
+    '[data-dc-slot].dc-dragging .dc-card{box-shadow:0 12px 40px rgba(0,0,0,.25),0 0 0 2px #c96442;transform:scale(1.02)}',
+    '.dc-card{isolation:isolate;transition:box-shadow .15s,transform .15s}',
+    '.dc-card *{scrollbar-width:none}',
+    '.dc-card *::-webkit-scrollbar{display:none}',
+    '.dc-header{position:absolute;bottom:100%;left:-4px;margin-bottom:calc(4px * var(--dc-inv-zoom,1));z-index:2;display:flex;align-items:center;container-type:inline-size}',
+    '.dc-labelrow{display:flex;align-items:center;gap:4px;height:24px;flex:1 1 auto;min-width:0}',
+    '.dc-grip{flex:0 0 auto;cursor:grab;display:flex;align-items:center;padding:5px 4px;border-radius:4px;transition:background .12s,opacity .12s}',
+    '.dc-grip:hover{background:rgba(0,0,0,.08)}',
+    '.dc-grip:active{cursor:grabbing}',
+    '.dc-labeltext{flex:1 1 auto;min-width:0;cursor:pointer;border-radius:4px;padding:3px 6px;display:flex;align-items:center;transition:background .12s;overflow:hidden}',
+    '.dc-labeltext:hover{background:rgba(0,0,0,.05)}',
+    '.dc-labeltext .dc-editable{overflow:hidden;text-overflow:ellipsis;max-width:100%}',
+    '.dc-labeltext .dc-editable:focus{overflow:visible;text-overflow:clip}',
+    '.dc-btns{flex:0 0 auto;margin-left:auto;display:flex;gap:2px;opacity:0;transition:opacity .12s}',
+    '[data-dc-slot]:hover .dc-btns{opacity:1}',
+    '.dc-expand{width:22px;height:22px;border-radius:5px;border:none;cursor:pointer;padding:0;background:transparent;color:rgba(60,50,40,.7);display:flex;align-items:center;justify-content:center;font:inherit;transition:background .12s,color .12s}',
+    '.dc-expand:hover{background:rgba(0,0,0,.06);color:#2a251f}',
+    '.dc-header{width:calc((100% + 4px) / var(--dc-inv-zoom,1));transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom left}',
+    '.dc-sectionhead{zoom:var(--dc-inv-zoom,1)}',
+    '@keyframes napfit-fade { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: none;} }',
+  ].join('\n');
+  document.head.appendChild(s);
+}
+
+const DCCtx = React.createContext(null);
+
+function dcFlatten(children) {
+  const out = [];
+  React.Children.forEach(children, (c) => {
+    if (c && c.type === React.Fragment) out.push(...dcFlatten(c.props.children));
+    else out.push(c);
+  });
+  return out;
+}
+
+function DesignCanvas({ children, minScale = 0.1, maxScale = 8, style = {} }) {
+  const [state, setState] = React.useState({ sections: {}, focus: null });
+  const [ready, setReady] = React.useState(true);
+
+  const registry = {};
+  const sectionMeta = {};
+  const sectionOrder = [];
+  dcFlatten(children).forEach((sec) => {
+    if (!sec || sec.type !== DCSection) return;
+    const sid = sec.props.id ?? sec.props.title;
+    if (!sid) return;
+    sectionOrder.push(sid);
+    const persisted = state.sections[sid] || {};
+    const abs = [];
+    dcFlatten(sec.props.children).forEach((ab) => {
+      if (!ab || ab.type !== DCArtboard) return;
+      const aid = ab.props.id ?? ab.props.label;
+      if (aid) abs.push([aid, ab]);
+    });
+    const srcKey = abs.map(([k]) => k).join('\x1f');
+    const hidden = persisted.srcKey === srcKey ? (persisted.hidden || []) : [];
+    const srcIds = [];
+    abs.forEach(([aid, ab]) => {
+      if (hidden.includes(aid)) return;
+      registry[`${sid}/${aid}`] = { sectionId: sid, artboard: ab };
+      srcIds.push(aid);
+    });
+    const kept = (persisted.order || []).filter((k) => srcIds.includes(k));
+    sectionMeta[sid] = {
+      title: persisted.title ?? sec.props.title,
+      subtitle: sec.props.subtitle,
+      slotIds: [...kept, ...srcIds.filter((k) => !kept.includes(k))],
+    };
+  });
+
+  const api = React.useMemo(() => ({
+    state,
+    section: (id) => state.sections[id] || {},
+    patchSection: (id, p) => setState((s) => ({
+      ...s,
+      sections: { ...s.sections, [id]: { ...s.sections[id], ...(typeof p === 'function' ? p(s.sections[id] || {}) : p) } },
+    })),
+    setFocus: (slotId) => setState((s) => ({ ...s, focus: slotId })),
+  }), [state]);
+
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') api.setFocus(null); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [api]);
+
+  return (
+    <DCCtx.Provider value={api}>
+      <DCViewport minScale={minScale} maxScale={maxScale} style={style}>{ready && children}</DCViewport>
+      {state.focus && registry[state.focus] && (
+        <DCFocusOverlay entry={registry[state.focus]} sectionMeta={sectionMeta} sectionOrder={sectionOrder} />
+      )}
+    </DCCtx.Provider>
+  );
+}
+
+function DCViewport({ children, minScale = 0.1, maxScale = 8, style = {} }) {
+  const vpRef = React.useRef(null);
+  const worldRef = React.useRef(null);
+  const tf = React.useRef({ x: 0, y: 0, scale: 1 });
+  const tfKey = 'dc-viewport:' + location.pathname;
+  const saveT = React.useRef(0);
+  const lastPostedScale = React.useRef();
+
+  const apply = React.useCallback(() => {
+    const { x, y, scale } = tf.current;
+    const el = worldRef.current;
+    if (!el) return;
+    el.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+    el.style.setProperty('--dc-inv-zoom', String(1 / scale));
+    if (lastPostedScale.current !== scale) {
+      lastPostedScale.current = scale;
+      window.parent.postMessage({ type: '__dc_zoom', scale }, '*');
+    }
+    clearTimeout(saveT.current);
+    saveT.current = setTimeout(() => {
+      try { localStorage.setItem(tfKey, JSON.stringify(tf.current)); } catch {}
+    }, 200);
+  }, [tfKey]);
+
+  React.useLayoutEffect(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(tfKey) || 'null');
+      if (s && Number.isFinite(s.x) && Number.isFinite(s.y) && Number.isFinite(s.scale)) {
+        tf.current = { x: s.x, y: s.y, scale: Math.min(maxScale, Math.max(minScale, s.scale)) };
+        apply();
+      }
+    } catch {}
+  }, []);
+
+  React.useEffect(() => {
+    const vp = vpRef.current;
+    if (!vp) return;
+
+    const zoomAt = (cx, cy, factor) => {
+      const r = vp.getBoundingClientRect();
+      const px = cx - r.left, py = cy - r.top;
+      const t = tf.current;
+      const next = Math.min(maxScale, Math.max(minScale, t.scale * factor));
+      const k = next / t.scale;
+      let marker = null, markerY0 = 0;
+      if (k !== 1) {
+        const hit = document.elementFromPoint(cx, cy);
+        marker = hit && hit.closest ? hit.closest('[data-dc-slot],[data-dc-section]') : null;
+        if (marker) markerY0 = marker.getBoundingClientRect().top;
+      }
+      t.x = px - (px - t.x) * k;
+      t.y = py - (py - t.y) * k;
+      t.scale = next;
+      apply();
+      if (marker) {
+        const drift = marker.getBoundingClientRect().top - (cy + (markerY0 - cy) * k);
+        if (Math.abs(drift) > 0.1) { t.y -= drift; apply(); }
+      }
+    };
+
+    const isMouseWheel = (e) =>
+      e.deltaMode !== 0 || (e.deltaX === 0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 40);
+
+    const onWheel = (e) => {
+      e.preventDefault();
+      if (isGesturing) return;
+      if ((e.ctrlKey || e.metaKey) && !isMouseWheel(e)) {
+        zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.01));
+      } else if (isMouseWheel(e)) {
+        zoomAt(e.clientX, e.clientY, Math.exp(-Math.sign(e.deltaY) * 0.18));
+      } else {
+        tf.current.x -= e.deltaX;
+        tf.current.y -= e.deltaY;
+        apply();
+      }
+    };
+
+    let gsBase = 1, isGesturing = false;
+    const onGestureStart = (e) => { e.preventDefault(); isGesturing = true; gsBase = tf.current.scale; };
+    const onGestureChange = (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, (gsBase * e.scale) / tf.current.scale); };
+    const onGestureEnd = (e) => { e.preventDefault(); isGesturing = false; };
+
+    let drag = null;
+    const onPointerDown = (e) => {
+      const onBg = !e.target.closest('[data-dc-slot], .dc-editable');
+      if (!(e.button === 1 || (e.button === 0 && onBg))) return;
+      e.preventDefault();
+      vp.setPointerCapture(e.pointerId);
+      drag = { id: e.pointerId, lx: e.clientX, ly: e.clientY };
+      vp.style.cursor = 'grabbing';
+    };
+    const onPointerMove = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      tf.current.x += e.clientX - drag.lx;
+      tf.current.y += e.clientY - drag.ly;
+      drag.lx = e.clientX; drag.ly = e.clientY;
+      apply();
+    };
+    const onPointerUp = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      vp.releasePointerCapture(e.pointerId);
+      drag = null;
+      vp.style.cursor = '';
+    };
+
+    const onHostMsg = (e) => {
+      const d = e.data;
+      if (d && d.type === '__dc_set_zoom' && typeof d.scale === 'number') {
+        const r = vp.getBoundingClientRect();
+        zoomAt(r.left + r.width / 2, r.top + r.height / 2, d.scale / tf.current.scale);
+      } else if (d && d.type === '__dc_probe') {
+        window.parent.postMessage({ type: '__dc_present' }, '*');
+        lastPostedScale.current = undefined;
+        apply();
+      }
+    };
+    window.addEventListener('message', onHostMsg);
+    window.parent.postMessage({ type: '__dc_present' }, '*');
+    lastPostedScale.current = undefined;
+    apply();
+
+    vp.addEventListener('wheel', onWheel, { passive: false });
+    vp.addEventListener('gesturestart', onGestureStart, { passive: false });
+    vp.addEventListener('gesturechange', onGestureChange, { passive: false });
+    vp.addEventListener('gestureend', onGestureEnd, { passive: false });
+    vp.addEventListener('pointerdown', onPointerDown);
+    vp.addEventListener('pointermove', onPointerMove);
+    vp.addEventListener('pointerup', onPointerUp);
+    vp.addEventListener('pointercancel', onPointerUp);
+    return () => {
+      window.removeEventListener('message', onHostMsg);
+      vp.removeEventListener('wheel', onWheel);
+      vp.removeEventListener('gesturestart', onGestureStart);
+      vp.removeEventListener('gesturechange', onGestureChange);
+      vp.removeEventListener('gestureend', onGestureEnd);
+      vp.removeEventListener('pointerdown', onPointerDown);
+      vp.removeEventListener('pointermove', onPointerMove);
+      vp.removeEventListener('pointerup', onPointerUp);
+      vp.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, [apply, minScale, maxScale]);
+
+  const gridSvg = `url("data:image/svg+xml,%3Csvg width='120' height='120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M120 0H0v120' fill='none' stroke='${encodeURIComponent(DC.grid)}' stroke-width='1'/%3E%3C/svg%3E")`;
+  return (
+    <div ref={vpRef} style={{
+      height: '100vh', width: '100vw', background: DC.bg, overflow: 'hidden',
+      overscrollBehavior: 'none', touchAction: 'none', position: 'relative',
+      fontFamily: DC.font, boxSizing: 'border-box', ...style,
+    }}>
+      <div ref={worldRef} style={{
+        position: 'absolute', top: 0, left: 0, transformOrigin: '0 0',
+        willChange: 'transform', width: 'max-content', minWidth: '100%', minHeight: '100%',
+        padding: '60px 0 80px',
+      }}>
+        <div style={{ position: 'absolute', inset: -6000, backgroundImage: gridSvg, backgroundSize: '120px 120px', pointerEvents: 'none', zIndex: -1 }} />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function DCSection({ id, title, subtitle, children, gap = 48 }) {
+  const ctx = React.useContext(DCCtx);
+  const sid = id ?? title;
+  const all = React.Children.toArray(dcFlatten(children));
+  const artboards = all.filter((c) => c && c.type === DCArtboard);
+  const rest = all.filter((c) => !(c && c.type === DCArtboard));
+  const sec = (ctx && sid && ctx.section(sid)) || {};
+  const allIds = artboards.map((a) => a.props.id ?? a.props.label).filter(Boolean);
+  const srcKey = allIds.join('\x1f');
+  const hidden = sec.srcKey === srcKey ? (sec.hidden || []) : [];
+  const srcOrder = allIds.filter((k) => !hidden.includes(k));
+
+  const order = React.useMemo(() => {
+    const kept = (sec.order || []).filter((k) => srcOrder.includes(k));
+    return [...kept, ...srcOrder.filter((k) => !kept.includes(k))];
+  }, [sec.order, srcOrder.join('|')]);
+
+  const byId = Object.fromEntries(artboards.map((a) => [a.props.id ?? a.props.label, a]));
+
+  return (
+    <div data-dc-section={sid} style={{ marginBottom: 'calc(80px * var(--dc-inv-zoom, 1))', position: 'relative' }}>
+      <div style={{ padding: '0 60px' }}>
+        <div className="dc-sectionhead" style={{ paddingBottom: 36 }}>
+          <div style={{ fontSize: 28, fontWeight: 600, color: DC.title, letterSpacing: -0.4, marginBottom: 6 }}>{sec.title ?? title}</div>
+          {subtitle && <div style={{ fontSize: 16, color: DC.subtitle }}>{subtitle}</div>}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap, padding: '0 60px', alignItems: 'flex-start', width: 'max-content' }}>
+        {order.map((k) => (
+          <DCArtboardFrame key={k} sectionId={sid} artboard={byId[k]} order={order}
+            label={(sec.labels || {})[k] ?? byId[k].props.label}
+            onFocus={() => ctx && ctx.setFocus(`${sid}/${k}`)} />
+        ))}
+      </div>
+      {rest}
+    </div>
+  );
+}
+
+function DCArtboard() { return null; }
+
+function DCArtboardFrame({ sectionId, artboard, label, order, onFocus }) {
+  const { id: rawId, label: rawLabel, width = 260, height = 480, children, style = {} } = artboard.props;
+  const id = rawId ?? rawLabel;
+  const ref = React.useRef(null);
+  const cardRef = React.useRef(null);
+
+  return (
+    <div ref={ref} data-dc-slot={id} style={{ position: 'relative', flexShrink: 0 }}>
+      <div className="dc-header" style={{ color: DC.label }}>
+        <div className="dc-labelrow">
+          <div className="dc-grip">
+            <svg width="9" height="13" viewBox="0 0 9 13" fill="currentColor"><circle cx="2" cy="2" r="1.1"/><circle cx="7" cy="2" r="1.1"/><circle cx="2" cy="6.5" r="1.1"/><circle cx="7" cy="6.5" r="1.1"/><circle cx="2" cy="11" r="1.1"/><circle cx="7" cy="11" r="1.1"/></svg>
+          </div>
+          <div className="dc-labeltext" onClick={onFocus} title="Click to focus">
+            <span className="dc-editable" style={{ fontSize: 15, fontWeight: 500, color: DC.label, lineHeight: 1 }}>{label}</span>
+          </div>
+        </div>
+        <div className="dc-btns">
+          <button className="dc-expand" onClick={onFocus} title="Focus">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M7 1h4v4M5 11H1V7M11 1L7.5 4.5M1 11l3.5-3.5"/></svg>
+          </button>
+        </div>
+      </div>
+      <div ref={cardRef} className="dc-card"
+        style={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)', overflow: 'hidden', width, height, background: '#fff', ...style }}>
+        {children || <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 13, fontFamily: DC.font }}>{id}</div>}
+      </div>
+    </div>
+  );
+}
+
+function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
+  const ctx = React.useContext(DCCtx);
+  const { sectionId, artboard } = entry;
+  const sec = ctx.section(sectionId);
+  const meta = sectionMeta[sectionId];
+  const peers = meta.slotIds;
+  const aid = artboard.props.id ?? artboard.props.label;
+  const idx = peers.indexOf(aid);
+  const secIdx = sectionOrder.indexOf(sectionId);
+
+  const go = (d) => { const n = peers[(idx + d + peers.length) % peers.length]; if (n) ctx.setFocus(`${sectionId}/${n}`); };
+
+  React.useEffect(() => {
+    const k = (e) => {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+    };
+    document.addEventListener('keydown', k);
+    return () => document.removeEventListener('keydown', k);
+  });
+
+  const { width = 260, height = 480, children } = artboard.props;
+  const [vp, setVp] = React.useState({ w: window.innerWidth, h: window.innerHeight });
+  React.useEffect(() => {
+    const r = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', r);
+    return () => window.removeEventListener('resize', r);
+  }, []);
+  const scale = Math.max(0.1, Math.min((vp.w - 200) / width, (vp.h - 260) / height, 2));
+
+  const Arrow = ({ dir, onClick }) => (
+    <button onClick={(e) => { e.stopPropagation(); onClick(); }}
+      style={{ position: 'absolute', top: '50%', [dir]: 28, transform: 'translateY(-50%)',
+        border: 'none', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.9)',
+        width: 44, height: 44, borderRadius: 22, fontSize: 18, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s' }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.18)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.08)')}>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <path d={dir === 'left' ? 'M11 3L5 9l6 6' : 'M7 3l6 6-6 6'} /></svg>
+    </button>
+  );
+
+  return ReactDOM.createPortal(
+    <div onClick={() => ctx.setFocus(null)}
+      onWheel={(e) => e.preventDefault()}
+      style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(24,20,16,.6)', backdropFilter: 'blur(14px)',
+        fontFamily: DC.font, color: '#fff' }}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 72, display: 'flex', alignItems: 'flex-start', padding: '16px 20px 0', gap: 16 }}>
+        <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: -0.3, padding: '6px 8px' }}>{meta.title}</div>
+        <div style={{ flex: 1 }} />
+        <button onClick={() => ctx.setFocus(null)}
+          style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.7)', width: 32, height: 32,
+            borderRadius: 16, fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>×</button>
+      </div>
+      <div style={{ position: 'absolute', top: 64, bottom: 56, left: 100, right: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ width: width * scale, height: height * scale, position: 'relative' }}>
+          <div style={{ width, height, transform: `scale(${scale})`, transformOrigin: 'top left', background: '#fff', borderRadius: 2, overflow: 'hidden',
+            boxShadow: '0 20px 80px rgba(0,0,0,.4)' }}>
+            {children}
+          </div>
+        </div>
+        <div onClick={(e) => e.stopPropagation()} style={{ fontSize: 14, fontWeight: 500, opacity: .85, textAlign: 'center' }}>
+          {(sec.labels || {})[aid] ?? artboard.props.label}
+          <span style={{ opacity: .5, marginLeft: 10 }}>{idx + 1} / {peers.length}</span>
+        </div>
+      </div>
+      <Arrow dir="left" onClick={() => go(-1)} />
+      <Arrow dir="right" onClick={() => go(1)} />
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8 }}>
+        {peers.map((p, i) => (
+          <button key={p} onClick={() => ctx.setFocus(`${sectionId}/${p}`)}
+            style={{ border: 'none', padding: 0, cursor: 'pointer', width: 6, height: 6, borderRadius: 3,
+              background: i === idx ? '#fff' : 'rgba(255,255,255,.3)' }} />
+        ))}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCREENS
+// ═══════════════════════════════════════════════════════════════
+const C = {
+  bg: '#F5F0E8',
+  bg2: '#EFE9DF',
+  card: '#FFFFFF',
+  blue: '#5E7BA8',
+  blueDeep: '#4E6B95',
+  blueSoft: '#E2EAF3',
+  blueChip: '#D4DFEC',
+  ink: '#2E3A4F',
+  ink2: '#6B7585',
+  ink3: '#9BA3B0',
+  ink4: '#C8CEDA',
+  divider: '#ECE6DD',
+  cream: '#F6E9CC',
+  creamDeep: '#EFDDB6',
+  yellowBtn: '#ECC97A',
+  yellowBtnDk: '#D6B25E',
+  green: '#A8C49A', greenBg: '#E2ECDA', greenInk: '#6E8A5E',
+  amber: '#E7CE89', amberBg: '#F2E8CC', amberInk: '#A0833E',
+  red:   '#D89E92', redBg:   '#F0DBD3', redInk:   '#A86F62',
+};
+
+function Phone({ children, bg = C.bg }) {
+  return (
+    <div style={{
+      width: 320, height: 660, borderRadius: 36, overflow: 'hidden',
+      background: bg, position: 'relative',
+      boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 20px 40px rgba(40,50,70,0.10), 0 0 0 1px rgba(0,0,0,0.05)',
+      fontFamily: '"Noto Sans JP", -apple-system, system-ui, sans-serif',
+      color: C.ink,
+      display: 'flex', flexDirection: 'column',
+    }}>{children}</div>
+  );
+}
+
+function StatusBar({ dark = false }) {
+  const c = dark ? '#fff' : '#1B2536';
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '12px 22px 6px', fontSize: 13, fontWeight: 600, color: c,
+      fontFamily: '-apple-system, "SF Pro Text", system-ui', flexShrink: 0,
+    }}>
+      <span style={{ letterSpacing: 0.2 }}>9:41</span>
+      <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+        <svg width="16" height="10" viewBox="0 0 16 10"><g fill={c}>
+          <rect x="0"  y="6" width="2.5" height="4" rx="0.5" />
+          <rect x="3.6" y="4" width="2.5" height="6" rx="0.5" />
+          <rect x="7.2" y="2" width="2.5" height="8" rx="0.5" />
+          <rect x="10.8" y="0" width="2.5" height="10" rx="0.5" />
+        </g></svg>
+        <svg width="14" height="10" viewBox="0 0 14 10"><g fill={c}>
+          <path d="M7 2.6c2 0 3.8.8 5.1 2.1l1-1A8.4 8.4 0 0 0 7 1.1 8.4 8.4 0 0 0 .9 3.7l1 1A7.2 7.2 0 0 1 7 2.6Z"/>
+          <path d="M7 5.4c1.2 0 2.3.5 3.1 1.3l1-1A6 6 0 0 0 7 4a6 6 0 0 0-4.1 1.7l1 1A4.5 4.5 0 0 1 7 5.4Z"/>
+          <circle cx="7" cy="8.7" r="1.3" />
+        </g></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11">
+          <rect x="0.5" y="0.5" width="20" height="10" rx="2.6" fill="none" stroke={c} strokeOpacity="0.4"/>
+          <rect x="2" y="2" width="17" height="7" rx="1.4" fill={c}/>
+          <rect x="21.5" y="3.5" width="2" height="4" rx="1" fill={c} fillOpacity="0.4"/>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+const SHEEP_SRC = {
+  stand:  'sheep/smile.png',
+  standL: 'sheep/smile.png',
+  sleep:  'sheep/sleep.png',
+  pillow: 'sheep/pillow.png',
+  rest:   'sheep/lie.png',
+  lie:    'sheep/lie.png',
+  sit:    'sheep/smile.png',
+  smile:  'sheep/smile.png',
+  alert:  'sheep/alert.png',
+  roll:   'sheep/roll.png',
+  read:   'sheep/read.png',
+};
+function Sheep({ size = 56, pose = 'stand', style }) {
+  const src = SHEEP_SRC[pose] || SHEEP_SRC.stand;
+  const isWide = ['sleep','pillow','rest','roll','lie','smile'].includes(pose);
+  const w = isWide ? size * 1.5 : size;
+  return (
+    <img src={src} alt="" draggable="false" style={{
+      width: w, height: 'auto', display: 'block', userSelect: 'none', ...style,
+    }} />
+  );
+}
+
+const Icon = {
+  menu: (c='#2E3A4F') => (<svg width="20" height="20" viewBox="0 0 20 20"><g stroke={c} strokeWidth="1.7" strokeLinecap="round"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></g></svg>),
+  close: (c='#2E3A4F') => (<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><g stroke={c} strokeWidth="2" strokeLinecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></g></svg>),
+  back: (c='#2E3A4F') => (<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3l-6 6 6 6" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>),
+  chevR: (c='#C8CEDA') => (<svg width="10" height="14" viewBox="0 0 10 14" fill="none"><path d="M2 2l5 5-5 5" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
+  chevL: (c='#9BA3B0') => (<svg width="10" height="14" viewBox="0 0 10 14" fill="none"><path d="M8 2L3 7l5 5" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
+  play: (c='#fff') => (<svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 2v10l9-5z" fill={c}/></svg>),
+  home: (c, fill=false) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" fill={fill?c:'none'}/></svg>),
+  hist: (c, fill=false) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" stroke={c} strokeWidth="1.8" fill={fill?c:'none'}/><path d="M4 9h16" stroke={c} strokeWidth="1.8"/><circle cx="12" cy="14" r="2" fill={fill?'#fff':c}/></svg>),
+  gear: (c, fill=false) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke={c} strokeWidth="1.8" fill={fill?c:'none'}/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke={c} strokeWidth="1.8" strokeLinecap="round"/></svg>),
+  bell:   (c) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z" stroke={c} strokeWidth="1.8" strokeLinejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" stroke={c} strokeWidth="1.8" strokeLinecap="round"/></svg>),
+  note:   (c) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l10-2v13" stroke={c} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round"/><circle cx="7" cy="18" r="2.5" stroke={c} strokeWidth="1.8"/><circle cx="17" cy="16" r="2.5" stroke={c} strokeWidth="1.8"/></svg>),
+  alarm:  (c) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="8" stroke={c} strokeWidth="1.8"/><path d="M12 9v4l3 2M3 6l4-3M21 6l-4-3" stroke={c} strokeWidth="1.8" strokeLinecap="round"/></svg>),
+  theme:  (c) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke={c} strokeWidth="1.8"/><path d="M12 4a8 8 0 0 0 0 16z" fill={c}/></svg>),
+  pro:    (c) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 9l4-5 5 4 5-4 4 5-3 11H6z" stroke={c} strokeWidth="1.8" strokeLinejoin="round"/></svg>),
+  refr:   (c) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v4h-4" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
+  chart:  (c) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><g fill={c}><rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="9" width="4" height="12" rx="1"/><rect x="17" y="5" width="4" height="16" rx="1"/></g></svg>),
+  cal:    (c) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2.5" stroke={c} strokeWidth="1.8"/><line x1="3" y1="10" x2="21" y2="10" stroke={c} strokeWidth="1.8"/><line x1="8" y1="3" x2="8" y2="7" stroke={c} strokeWidth="1.8" strokeLinecap="round"/><line x1="16" y1="3" x2="16" y2="7" stroke={c} strokeWidth="1.8" strokeLinecap="round"/></svg>),
+};
+
+function Face({ kind = 'good', size = 28 }) {
+  const map = {
+    good: { bg: '#9DBF8C', mouth: 'smile' },
+    ok:   { bg: '#E1C375', mouth: 'flat'  },
+    bad:  { bg: '#CC8478', mouth: 'frown' },
+  };
+  const m = map[kind];
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="14" fill={m.bg}/>
+      <circle cx="11.5" cy="14" r="1.6" fill="#fff"/>
+      <circle cx="20.5" cy="14" r="1.6" fill="#fff"/>
+      {m.mouth === 'smile' && <path d="M10.5 19c2 2.6 9 2.6 11 0" stroke="#fff" strokeWidth="1.8" fill="none" strokeLinecap="round"/>}
+      {m.mouth === 'flat'  && <line x1="11" y1="20" x2="21" y2="20" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>}
+      {m.mouth === 'frown' && <path d="M10.5 21c2-2.6 9-2.6 11 0" stroke="#fff" strokeWidth="1.8" fill="none" strokeLinecap="round"/>}
+    </svg>
+  );
+}
+
+function TabBar({ active = 'home', nav }) {
+  const item = (key, label, render) => {
+    const on = active === key;
+    const col = on ? C.blue : C.ink3;
+    return (
+      <div onClick={() => nav && nav(key)} style={{
+        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, paddingTop: 8,
+        cursor: 'pointer',
+      }}>
+        {render(col, on)}
+        <div style={{ fontSize: 10, color: col, fontWeight: on ? 700 : 500, letterSpacing: 0.5 }}>{label}</div>
+      </div>
+    );
+  };
+  return (
+    <div style={{
+      flexShrink: 0, height: 64, background: '#FFFFFF',
+      borderTop: `1px solid ${C.divider}`,
+      display: 'flex', paddingBottom: 6,
+    }}>
+      {item('home', 'ホーム', (c, on) => Icon.home(c, on))}
+      {item('hist', '履歴',   (c, on) => Icon.hist(c, on))}
+      {item('set',  '設定',   (c, on) => Icon.gear(c, on))}
+    </div>
+  );
+}
+
+function Card({ children, style, onClick }) {
+  return (
+    <div onClick={onClick} style={{
+      background: C.card, borderRadius: 18, padding: 16,
+      boxShadow: '0 1px 2px rgba(40,50,70,0.04), 0 4px 14px rgba(40,50,70,0.05)',
+      cursor: onClick ? 'pointer' : 'default',
+      ...style,
+    }}>{children}</div>
+  );
+}
+
+// ═══ HOME ═══
+function HomeScreen({ nav, duration, setDuration }) {
+  const bars = [
+    { label: '15分', h: 30 },
+    { label: '20分', h: 56, hi: true },
+    { label: '30分', h: 22 },
+  ];
+  const opts = ['15分','20分','30分'];
+  return (
+    <Phone>
+      <StatusBar />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px 4px' }}>
+        <div style={{ cursor: 'pointer' }}>{Icon.menu()}</div>
+        <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Sheep size={28} />
+        </div>
+      </div>
+      <div style={{ padding: '6px 20px 0' }}>
+        <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.2 }}>こんにちは！</div>
+        <div style={{ fontSize: 13, color: C.ink2, marginTop: 4 }}>今日も、いい仮眠で整えましょう。</div>
+      </div>
+
+      <div style={{ padding: '14px 16px 0' }}>
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: C.ink2, letterSpacing: 0.3 }}>あなたのおすすめ仮眠時間</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, marginTop: 2 }}>
+                <div style={{ fontSize: 40, fontWeight: 800, color: C.blue, letterSpacing: -1, lineHeight: 1 }}>20</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.blue }}>分</div>
+              </div>
+              <div style={{ fontSize: 10.5, color: C.ink2, marginTop: 6, lineHeight: 1.5, maxWidth: 170 }}>
+                直近7回の記録では、<br/>20分がすっきりしやすい傾向です
+              </div>
+            </div>
+            <div style={{ marginTop: 4 }}><Sheep pose="lie" size={56} /></div>
+          </div>
+          <div style={{ marginTop: 12, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', height: 64, padding: '0 4px' }}>
+            {bars.map((b, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div style={{ width: 40, height: b.h, background: b.hi ? C.blue : C.blueChip, borderRadius: 4 }} />
+                <div style={{ fontSize: 9.5, color: C.ink2 }}>{b.label}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div style={{ padding: '18px 20px 0', fontSize: 13, fontWeight: 600 }}>仮眠時間を選ぶ</div>
+      <div style={{ padding: '10px 16px 0', display: 'flex', gap: 8 }}>
+        {opts.map((o) => {
+          const sel = o === duration;
+          return (
+            <div key={o} onClick={() => setDuration(o)} style={{
+              flex: 1, height: 42, borderRadius: 12,
+              background: sel ? C.blue : '#fff',
+              color: sel ? '#fff' : C.ink,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              boxShadow: sel ? '0 4px 10px rgba(94,123,168,0.30)' : '0 1px 2px rgba(40,50,70,0.05)',
+              transition: 'all .15s',
+            }}>{o}</div>
+          );
+        })}
+      </div>
+      <div style={{ padding: '10px 16px 0' }}>
+        <div style={{
+          height: 36, borderRadius: 10, background: '#FFFFFF',
+          border: `1px dashed ${C.ink4}`, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 11.5, fontWeight: 600, color: C.ink2,
+        }}>カスタム設定</div>
+      </div>
+
+      <div style={{ padding: '14px 16px 0' }}>
+        <div onClick={() => nav('napping')} style={{
+          height: 50, borderRadius: 14, background: C.blue, color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          fontSize: 15, fontWeight: 700, letterSpacing: 0.2, cursor: 'pointer',
+          boxShadow: '0 8px 18px rgba(94,123,168,0.30)',
+        }}>
+          {Icon.play()} 仮眠をはじめる
+        </div>
+      </div>
+      <div style={{ flex: 1 }} />
+      <TabBar active="home" nav={nav} />
+    </Phone>
+  );
+}
+
+// ═══ NAPPING ═══
+function NappingScreen({ nav, remaining }) {
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  const fmt = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  return (
+    <Phone bg={C.blue}>
+      <StatusBar dark />
+      <div style={{ display: 'flex', padding: '8px 20px 0' }}>
+        <div onClick={() => nav('home')} style={{ cursor: 'pointer' }}>{Icon.close('#fff')}</div>
+      </div>
+      <div style={{ padding: '18px 24px 0', color: '#fff', textAlign: 'center' }}>
+        <div style={{ fontSize: 13, opacity: 0.88, fontWeight: 500 }}>この画面を開いたままにしてください</div>
+      </div>
+      <div onClick={() => nav('wake')} style={{ padding: '34px 24px 0', textAlign: 'center', color: '#fff', cursor: 'pointer' }}>
+        <div style={{ fontSize: 13, opacity: 0.78, fontWeight: 500 }}>残り時間</div>
+        <div style={{
+          fontFamily: 'Inter, -apple-system, system-ui',
+          fontSize: 76, fontWeight: 300, letterSpacing: -2, lineHeight: 1, marginTop: 6,
+        }}>{fmt}</div>
+        <div style={{ fontSize: 12, marginTop: 18, opacity: 0.78, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <span style={{ fontSize: 13 }}>♪</span> BGM再生中
+        </div>
+        <div style={{ fontSize: 10, marginTop: 14, opacity: 0.5 }}>（タップでスキップ）</div>
+      </div>
+
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Sheep pose="sleep" size={120} />
+      </div>
+
+      <div style={{ padding: '0 20px 24px' }}>
+        <div onClick={() => nav('home')} style={{
+          height: 48, borderRadius: 14, background: '#FFFFFF', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 14, fontWeight: 700, color: C.ink,
+        }}>中断する</div>
+      </div>
+    </Phone>
+  );
+}
+
+// ═══ WAKE ═══
+function WakeScreen({ nav }) {
+  return (
+    <Phone bg={C.cream}>
+      <StatusBar />
+      <div style={{ display: 'flex', padding: '8px 20px 0' }}>
+        <div onClick={() => nav('home')} style={{ cursor: 'pointer' }}>{Icon.close()}</div>
+      </div>
+      <div style={{ padding: '34px 24px 0', textAlign: 'center' }}>
+        <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.3 }}>おはようございます！</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: C.ink2, marginTop: 8 }}>起きる時間です</div>
+      </div>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Sheep pose="alert" size={150} />
+      </div>
+      <div style={{ padding: '0 20px 8px' }}>
+        <div onClick={() => nav('record')} style={{
+          height: 52, borderRadius: 14, background: C.yellowBtn, color: '#5C4A1F', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 15, fontWeight: 800, letterSpacing: 0.2,
+          boxShadow: '0 6px 14px rgba(214,178,94,0.35)',
+        }}>アラームを止める</div>
+        <div onClick={() => nav('home')} style={{ textAlign: 'center', marginTop: 14, fontSize: 13, fontWeight: 600, color: C.ink2, cursor: 'pointer' }}>
+          スキップ（記録しない）
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 8, fontSize: 10.5, color: C.ink3, paddingBottom: 16 }}>
+          ※スキップしても、仮眠の記録は残りません
+        </div>
+      </div>
+    </Phone>
+  );
+}
+
+// ═══ RECORD ═══
+function RecordScreen({ nav, onPick }) {
+  const rows = [
+    { face: 'good', title: 'すっきり', sub: 'よく休めた気がする',  bg: C.greenBg },
+    { face: 'ok',   title: '普通',    sub: 'ふつう',             bg: C.amberBg },
+    { face: 'bad',  title: 'だるい',  sub: 'まだ眠い・重い感じ',  bg: C.redBg   },
+  ];
+  return (
+    <Phone bg={C.bg}>
+      <StatusBar />
+      <div style={{ display: 'flex', padding: '8px 20px 0' }}>
+        <div onClick={() => nav('wake')} style={{ cursor: 'pointer' }}>{Icon.back()}</div>
+      </div>
+      <div style={{ padding: '14px 24px 0' }}>
+        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.2 }}>起きた感じを教えてください</div>
+        <div style={{ fontSize: 12.5, color: C.ink2, marginTop: 6 }}>今日のコンディションを記録しましょう</div>
+      </div>
+
+      <div style={{ padding: '20px 16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {rows.map((r) => (
+          <div key={r.face} onClick={() => { onPick && onPick(r.face); nav('hist'); }} style={{
+            background: r.bg, borderRadius: 16, padding: '14px 16px',
+            display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
+            transition: 'transform .12s',
+          }}>
+            <Face kind={r.face} size={34} />
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.ink }}>{r.title}</div>
+              <div style={{ fontSize: 11.5, color: C.ink2, marginTop: 2 }}>{r.sub}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ padding: '24px 24px 0', textAlign: 'center', fontSize: 11.5, lineHeight: 1.7, color: C.ink2 }}>
+        記録すると、<br/>あなたに合う仮眠時間が見えてきます
+      </div>
+      <div style={{ flex: 1 }} />
+    </Phone>
+  );
+}
+
+// ═══ HISTORY ═══
+function HistoryScreen({ nav, extraRow }) {
+  const baseRows = [
+    { d: '5/20 (火)', dur: '20分', tag: 'すっきり', face: 'good' },
+    { d: '5/19 (月)', dur: '15分', tag: '普通',   face: 'ok'   },
+    { d: '5/18 (日)', dur: '30分', tag: 'だるい', face: 'bad'  },
+    { d: '5/17 (土)', dur: '20分', tag: 'すっきり', face: 'good' },
+    { d: '5/16 (金)', dur: '15分', tag: '普通',   face: 'ok'   },
+    { d: '5/15 (木)', dur: '20分', tag: 'すっきり', face: 'good' },
+  ];
+  const rows = extraRow ? [extraRow, ...baseRows] : baseRows;
+  return (
+    <Phone>
+      <StatusBar />
+      <div style={{ padding: '8px 20px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.2 }}>履歴</div>
+          <Sheep pose="pillow" size={28} />
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <div onClick={() => nav('cal')} title="カレンダー表示" style={{
+            width: 32, height: 32, borderRadius: 10, background: '#fff', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 1px 2px rgba(40,50,70,0.06)',
+          }}>{Icon.cal(C.blue)}</div>
+          <div onClick={() => nav('ana')} title="分析を見る" style={{
+            width: 32, height: 32, borderRadius: 10, background: '#fff', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 1px 2px rgba(40,50,70,0.06)',
+          }}>{Icon.chart(C.blue)}</div>
+        </div>
+      </div>
+
+      <div style={{ padding: '4px 16px 0' }}>
+        <Card style={{ padding: 14 }}>
+          <div style={{ fontSize: 11.5, color: C.ink2, fontWeight: 600 }}>直近10回のまとめ</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, padding: '0 6px' }}>
+            <Stat color={C.greenInk} label="すっきり" value="6" />
+            <Divider />
+            <Stat color={C.amberInk} label="普通"   value="2" />
+            <Divider />
+            <Stat color={C.redInk}   label="だるい" value="2" />
+          </div>
+        </Card>
+      </div>
+
+      <div style={{ padding: '14px 16px 0', flex: 1, overflow: 'hidden' }}>
+        <div style={{ background: C.card, borderRadius: 16, overflow: 'hidden',
+          boxShadow: '0 1px 2px rgba(40,50,70,0.04), 0 4px 14px rgba(40,50,70,0.05)' }}>
+          {rows.map((r, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', padding: '11px 16px',
+              borderBottom: i === rows.length - 1 ? 'none' : `1px solid ${C.divider}`,
+              cursor: 'pointer',
+              background: i === 0 && extraRow ? '#FBF7EF' : 'transparent',
+            }}>
+              <div style={{ width: 78, fontSize: 12, fontWeight: 600, color: C.ink }}>{r.d}</div>
+              <div style={{ flex: 1, fontSize: 12, color: C.ink2 }}>{r.dur}</div>
+              <div style={{ fontSize: 11.5, color: C.ink2, marginRight: 10 }}>{r.tag}</div>
+              <Face kind={r.face} size={22} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <TabBar active="hist" nav={nav} />
+    </Phone>
+  );
+}
+
+function Stat({ color, label, value }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+      <div style={{ fontSize: 11, color: C.ink2, fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 19, fontWeight: 800, color, marginTop: 2 }}>{value}<span style={{ fontSize: 11, marginLeft: 2 }}>回</span></div>
+    </div>
+  );
+}
+function Divider() { return <div style={{ width: 1, background: C.divider, alignSelf: 'stretch' }} />; }
+
+// ═══ CALENDAR (Pro) ═══
+function CalendarScreen({ nav }) {
+  const week = ['日','月','火','水','木','金','土'];
+  const dot = (kind) => kind ? (
+    <div style={{
+      width: 14, height: 14, borderRadius: 99,
+      background: kind === 'good' ? '#A5C495' : kind === 'ok' ? '#E5C97B' : '#D89485',
+    }}/>
+  ) : null;
+  const days = [
+    {n:28,p:1},{n:29,p:1},{n:30,p:1},{n:1},{n:2},{n:3},{n:4},
+    {n:5},{n:6},{n:7,k:'good'},{n:8,k:'good'},{n:9,k:'ok'},{n:10},{n:11},
+    {n:12,k:'good'},{n:13},{n:14,k:'ok'},{n:15,k:'good'},{n:16,k:'good'},{n:17,k:'bad'},{n:18,k:'good'},
+    {n:19,k:'bad'},{n:20,k:'good'},{n:21,k:'bad'},{n:22,k:'ok'},{n:23,k:'ok'},{n:24,k:'good'},{n:25,k:'good'},
+    {n:26,k:'bad'},{n:27,k:'good'},{n:28},{n:29,k:'good'},{n:30},{n:31},{n:1,p:1},
+  ];
+
+  return (
+    <Phone>
+      <StatusBar />
+      <div style={{ display: 'flex', alignItems: 'center', padding: '8px 20px 0' }}>
+        <div onClick={() => nav('hist')} style={{ cursor: 'pointer' }}>{Icon.back()}</div>
+        <div style={{ flex: 1, textAlign: 'center', fontSize: 12, fontWeight: 700, color: C.ink2, marginRight: 18 }}>履歴に戻る</div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 22px 0' }}>
+        <div style={{ cursor: 'pointer' }}>{Icon.chevL()}</div>
+        <div style={{ fontSize: 16, fontWeight: 800 }}>2024年5月</div>
+        <div style={{ transform: 'rotate(180deg)', cursor: 'pointer' }}>{Icon.chevL()}</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', padding: '8px 14px 0' }}>
+        {week.map((w, i) => (
+          <div key={w} style={{
+            fontSize: 11, fontWeight: 700, textAlign: 'center',
+            color: i === 0 ? '#C97B7B' : i === 6 ? '#7B97C9' : C.ink2,
+          }}>{w}</div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', padding: '4px 12px 0', rowGap: 4 }}>
+        {days.map((d, i) => (
+          <div key={i} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '6px 0',
+          }}>
+            <div style={{
+              fontSize: 12, fontWeight: 600,
+              color: d.p ? C.ink4 : (i % 7 === 0 ? '#C97B7B' : i % 7 === 6 ? '#7B97C9' : C.ink),
+            }}>{d.n}</div>
+            <div style={{ height: 14 }}>{dot(d.k)}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop: 'auto', padding: '0 18px 14px', display: 'flex', justifyContent: 'space-around', fontSize: 11, color: C.ink2 }}>
+        <Legend color="#A5C495" label="すっきり" />
+        <Legend color="#E5C97B" label="普通" />
+        <Legend color="#D89485" label="だるい" />
+      </div>
+      <TabBar active="hist" nav={nav} />
+    </Phone>
+  );
+}
+function Legend({ color, label }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ width: 10, height: 10, borderRadius: 99, background: color }}/>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+// ═══ ANALYSIS (Pro) ═══
+function AnalysisScreen({ nav }) {
+  const [tab, setTab] = React.useState(0);
+  const data = [
+    [ { x:'10分',v:30}, {x:'15分',v:55}, {x:'20分',v:92,hi:true}, {x:'25分',v:60}, {x:'30分',v:48}, {x:'35分',v:40} ],
+    [ { x:'月',v:60}, {x:'火',v:75}, {x:'水',v:82,hi:true}, {x:'木',v:55}, {x:'金',v:48}, {x:'土',v:70}, {x:'日',v:42} ],
+    [ { x:'10時',v:55}, {x:'12時',v:62}, {x:'14時',v:88,hi:true}, {x:'16時',v:50}, {x:'18時',v:38} ],
+  ];
+  const titles = ['すっきり率（時間別）','すっきり率（曜日別）','すっきり率（時間帯別）'];
+  const bars = data[tab];
+  const tabs = ['時間別','曜日別','時間帯別'];
+
+  return (
+    <Phone>
+      <StatusBar />
+      <div style={{ display: 'flex', padding: '8px 20px 0' }}>
+        <div onClick={() => nav('hist')} style={{ cursor: 'pointer' }}>{Icon.back()}</div>
+      </div>
+      <div style={{ padding: '8px 16px 0' }}>
+        <div style={{ background: C.bg2, borderRadius: 12, padding: 4, display: 'flex', gap: 4 }}>
+          {tabs.map((t, i) => (
+            <div key={i} onClick={() => setTab(i)} style={{
+              flex: 1, height: 30, borderRadius: 9, cursor: 'pointer',
+              background: i === tab ? '#fff' : 'transparent',
+              boxShadow: i === tab ? '0 1px 3px rgba(40,50,70,0.10)' : 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: i === tab ? 700 : 600, color: i === tab ? C.ink : C.ink2,
+              transition: 'all .15s',
+            }}>{t}</div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: '16px 20px 0' }}>
+        <div style={{ fontSize: 14, fontWeight: 800 }}>{titles[tab]}</div>
+        <div style={{ fontSize: 10.5, color: C.ink2, marginTop: 2 }}>すっきりの割合（%）</div>
+      </div>
+
+      <div style={{ padding: '10px 20px 0' }}>
+        <div style={{ display: 'flex', height: 120 }}>
+          <div style={{ width: 28, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: 9, color: C.ink3, paddingBottom: 16, textAlign: 'right' }}>
+            <div>100%</div><div>75%</div><div>50%</div><div>25%</div><div>0%</div>
+          </div>
+          <div style={{ flex: 1, position: 'relative', marginLeft: 4 }}>
+            {[0,25,50,75,100].map(p => (
+              <div key={p} style={{ position: 'absolute', left: 0, right: 0, top: `${(100-p)*0.86}%`, borderTop: `1px dashed ${C.divider}` }}/>
+            ))}
+            <div style={{ position: 'absolute', inset: '0 0 16px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around' }}>
+              {bars.map((b, i) => (
+                <div key={i} style={{
+                  width: 22, height: `${b.v}%`,
+                  background: b.hi ? C.blue : C.blueChip,
+                  borderRadius: 4, transition: 'height .25s',
+                }} />
+              ))}
+            </div>
+            <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, display: 'flex', justifyContent: 'space-around', fontSize: 9.5, color: C.ink2 }}>
+              {bars.map((b, i) => <div key={i}>{b.x}</div>)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: '14px 16px 0' }}>
+        <div style={{
+          background: '#E2EAF3', borderRadius: 16, padding: '14px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.ink2 }}>あなたの最適仮眠時間（診断）</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, marginTop: 2 }}>
+              <div style={{ fontSize: 34, fontWeight: 800, color: C.blue, letterSpacing: -1, lineHeight: 1 }}>20</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.blue }}>分</div>
+            </div>
+            <div style={{ fontSize: 10.5, color: C.ink2, marginTop: 4, lineHeight: 1.5 }}>
+              あなたは20分の仮眠が<br/>すっきりしやすい傾向です
+            </div>
+          </div>
+          <Sheep pose="roll" size={64} />
+        </div>
+      </div>
+
+      <div style={{ padding: '12px 16px 0' }}>
+        <div style={{
+          height: 44, borderRadius: 12, background: '#fff', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 16px', fontSize: 13, fontWeight: 700, color: C.ink,
+          boxShadow: '0 1px 2px rgba(40,50,70,0.06)',
+        }}>
+          診断レポートをもっと見る {Icon.chevR()}
+        </div>
+      </div>
+
+      <div style={{ flex: 1 }} />
+      <TabBar active="hist" nav={nav} />
+    </Phone>
+  );
+}
+
+// ═══ SETTINGS ═══
+function SettingsScreen({ nav }) {
+  const rows = [
+    { icon: Icon.bell,  label: '通知設定',          detail: '許可されています', onClick: null },
+    { icon: Icon.note,  label: 'BGM選択',          detail: 'やさしいピアノ',  onClick: null },
+    { icon: Icon.alarm, label: 'アラーム音（Pro）', detail: 'シンプルベル',    onClick: null },
+    { icon: Icon.theme, label: 'テーマ（Pro）',    detail: 'ライトモード',    onClick: null },
+    { icon: Icon.pro,   label: 'NapFit Pro',       detail: '機能をアップグレード', onClick: () => nav('ana') },
+    { icon: Icon.refr,  label: '購入を復元',        detail: 'Restore Purchases', onClick: null },
+  ];
+  const rows2 = [
+    { label: 'プライバシーポリシー' },
+    { label: '利用規約' },
+    { label: 'アプリ情報' },
+  ];
+  return (
+    <Phone>
+      <StatusBar />
+      <div style={{ padding: '8px 20px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ fontSize: 22, fontWeight: 800 }}>設定</div>
+        <Sheep pose="read" size={36} />
+      </div>
+
+      <div style={{ padding: '4px 16px 0' }}>
+        <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden',
+          boxShadow: '0 1px 2px rgba(40,50,70,0.04), 0 4px 14px rgba(40,50,70,0.05)' }}>
+          {rows.map((r, i) => (
+            <div key={i} onClick={r.onClick || undefined} style={{
+              display: 'flex', alignItems: 'center', padding: '11px 14px',
+              borderBottom: i === rows.length - 1 ? 'none' : `1px solid ${C.divider}`,
+              cursor: r.onClick ? 'pointer' : 'default',
+            }}>
+              <div style={{ width: 28, display: 'flex', justifyContent: 'center', color: C.ink2 }}>{r.icon(C.ink2)}</div>
+              <div style={{ flex: 1, fontSize: 13, fontWeight: 600, marginLeft: 8 }}>{r.label}</div>
+              <div style={{ fontSize: 11.5, color: C.ink3, marginRight: 8 }}>{r.detail}</div>
+              {Icon.chevR()}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: '14px 16px 0' }}>
+        <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden',
+          boxShadow: '0 1px 2px rgba(40,50,70,0.04), 0 4px 14px rgba(40,50,70,0.05)' }}>
+          {rows2.map((r, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', padding: '12px 14px',
+              borderBottom: i === rows2.length - 1 ? 'none' : `1px solid ${C.divider}`,
+              cursor: 'pointer',
+            }}>
+              <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.ink }}>{r.label}</div>
+              {Icon.chevR()}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ flex: 1 }} />
+      <TabBar active="set" nav={nav} />
+    </Phone>
+  );
+}
+
+// ═══ Brand intro ═══
+function BrandIntro() {
+  return (
+    <div style={{
+      width: 320, padding: '30px 24px',
+      fontFamily: '"Noto Sans JP", system-ui', color: C.ink,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+        <div style={{
+          fontFamily: 'Inter, system-ui', fontSize: 48, fontWeight: 800,
+          color: C.blue, letterSpacing: -1.6, lineHeight: 1,
+        }}>NapFit</div>
+        <div style={{ paddingBottom: 4 }}><Sheep size={40} /></div>
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: C.ink, marginTop: 12 }}>
+        あなたに合う仮眠時間がわかる
+      </div>
+      <div style={{ fontSize: 12, color: C.ink2, lineHeight: 1.8, marginTop: 18 }}>
+        夜の睡眠時間に個人差があるように、<br/>
+        昼の仮眠にも「すっきり起きやすい長さ」は<br/>
+        人それぞれ。<br/><br/>
+        NapFit（ナップフィット）は、仮眠後の気分を<br/>
+        記録しながら、あなたに合う仮眠時間を<br/>
+        見つけるためのアラーム・昼寝分析アプリです。
+      </div>
+      <div style={{ display: 'flex', gap: 14, marginTop: 26 }}>
+        <Feature icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="8" stroke={C.blue} strokeWidth="1.8"/><path d="M12 9v4l3 2" stroke={C.blue} strokeWidth="1.8" strokeLinecap="round"/></svg>} title="仮眠タイマー" body="15分・20分・30分などかんたん設定" />
+        <Feature icon={<Face kind="good" size={22} />} title="気分を記録" body="起きた後に3択ですっきり度を記録" />
+        <Feature icon={Icon.chart(C.blue)} title="分析でわかる" body="記録が増えるほどあなたの傾向が見える" />
+      </div>
+      <div style={{
+        marginTop: 28, padding: '12px 14px', borderRadius: 14, background: '#fff',
+        boxShadow: '0 1px 2px rgba(40,50,70,0.04), 0 4px 12px rgba(40,50,70,0.05)',
+        fontSize: 11, color: C.ink2, lineHeight: 1.7,
+      }}>
+        <div style={{ fontWeight: 700, color: C.ink, marginBottom: 4 }}>▶ 右のプロトタイプで操作できます</div>
+        ホーム → 「仮眠をはじめる」<br/>
+        仮眠中 → 時刻部分タップでスキップ<br/>
+        起床 → 「アラームを止める」→ 3択記録<br/>
+        履歴の右上アイコンでカレンダー／分析へ
+      </div>
+    </div>
+  );
+}
+function Feature({ icon, title, body }) {
+  return (
+    <div style={{ flex: 1 }}>
+      <div style={{
+        width: 44, height: 44, borderRadius: 12, background: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 1px 2px rgba(40,50,70,0.04), 0 4px 12px rgba(40,50,70,0.05)',
+      }}>{icon}</div>
+      <div style={{ fontSize: 11.5, fontWeight: 700, marginTop: 10, color: C.ink }}>{title}</div>
+      <div style={{ fontSize: 10, color: C.ink2, marginTop: 4, lineHeight: 1.5 }}>{body}</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// APP
+// ═══════════════════════════════════════════════════════════════
+const W = 320, H = 660;
+
+function NapFitApp() {
+  const [screen, setScreen] = React.useState('home');
+  const [duration, setDuration] = React.useState('20分');
+  const [remaining, setRemaining] = React.useState(20 * 60 - 2);
+  const [lastPick, setLastPick] = React.useState(null);
+
+  React.useEffect(() => {
+    if (screen !== 'napping') return;
+    if (remaining <= 0) { setScreen('wake'); return; }
+    const id = setTimeout(() => setRemaining(r => r - 1), 1000);
+    return () => clearTimeout(id);
+  }, [screen, remaining]);
+
+  const nav = React.useCallback((next) => {
+    if (next === 'napping') {
+      const m = parseInt(duration, 10) || 20;
+      setRemaining(m * 60 - 2);
+    }
+    setScreen(next);
+  }, [duration]);
+
+  const extraRow = lastPick ? {
+    d: '今日',
+    dur: duration,
+    tag: lastPick === 'good' ? 'すっきり' : lastPick === 'ok' ? '普通' : 'だるい',
+    face: lastPick,
+  } : null;
+
+  let body;
+  switch (screen) {
+    case 'home':    body = <HomeScreen nav={nav} duration={duration} setDuration={setDuration} />; break;
+    case 'napping': body = <NappingScreen nav={nav} remaining={remaining} />; break;
+    case 'wake':    body = <WakeScreen nav={nav} />; break;
+    case 'record':  body = <RecordScreen nav={nav} onPick={setLastPick} />; break;
+    case 'hist':    body = <HistoryScreen nav={nav} extraRow={extraRow} />; break;
+    case 'cal':     body = <CalendarScreen nav={nav} />; break;
+    case 'ana':     body = <AnalysisScreen nav={nav} />; break;
+    case 'set':     body = <SettingsScreen nav={nav} />; break;
+    default:        body = <HomeScreen nav={nav} duration={duration} setDuration={setDuration} />;
+  }
+
+  return (
+    <div key={screen} style={{ width: W, height: H, animation: 'napfit-fade .25s ease' }}>
+      {body}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="brand" title="NapFit" subtitle="あなたに合う仮眠時間がわかる">
+        <DCArtboard id="intro" label="ブランド紹介" width={W} height={H}>
+          <BrandIntro />
+        </DCArtboard>
+        <DCArtboard id="proto" label="インタラクティブ プロトタイプ" width={W} height={H}>
+          <NapFitApp />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
