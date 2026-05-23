@@ -39,7 +39,7 @@ type AlarmId = typeof ALARM_OPTIONS[number]['id'];
 
 export default function SettingsScreen() {
   const [notifStatus, setNotifStatus] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
-  const [bgmId, setBgmId] = useState<BgmId>('piano');
+  const [bgmId, setBgmId] = useState<BgmId>('rain');
   const [alarmId, setAlarmId] = useState<AlarmId>('bell');
   const [bgmModalVisible, setBgmModalVisible] = useState(false);
   const [alarmModalVisible, setAlarmModalVisible] = useState(false);

@@ -1,9 +1,12 @@
 import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setupAudioSession } from './session';
 
-const ALARM_FILE = require('../../assets/audio/alarm/bell.mp3');
+const ALARM_SOURCES: Record<string, number> = {
+  bell: require('../../assets/audio/alarm/bell.mp3'),
+};
+const DEFAULT_ALARM = ALARM_SOURCES.bell;
 
-// §9.3: フェードイン3秒 / 最大5分で自動停止
 const FADE_IN_STEPS = 30;
 const FADE_IN_INTERVAL_MS = 100;
 const ALARM_MAX_MS = 5 * 60 * 1000;
@@ -12,11 +15,14 @@ let _sound: Audio.Sound | null = null;
 let _autoStopTimer: ReturnType<typeof setTimeout> | null = null;
 
 export async function startAlarm(): Promise<void> {
-  if (!ALARM_FILE) return;
+  const id = (await AsyncStorage.getItem('settings:alarm_sound_id')) ?? 'bell';
+  const file = ALARM_SOURCES[id] ?? DEFAULT_ALARM;
+  if (!file) return;
+
   await setupAudioSession();
   await stopAlarm();
 
-  const { sound } = await Audio.Sound.createAsync(ALARM_FILE, {
+  const { sound } = await Audio.Sound.createAsync(file, {
     isLooping: true,
     volume: 0,
     shouldPlay: true,

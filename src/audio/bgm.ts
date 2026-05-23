@@ -1,16 +1,23 @@
 import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setupAudioSession } from './session';
 
-const BGM_FILE = require('../../assets/audio/bgm/rain.mp3');
+const BGM_SOURCES: Record<string, number> = {
+  rain: require('../../assets/audio/bgm/rain.mp3'),
+};
+const DEFAULT_BGM = BGM_SOURCES.rain;
 
 let _sound: Audio.Sound | null = null;
 
 export async function startBgm(): Promise<void> {
-  if (!BGM_FILE) return;
+  const id = (await AsyncStorage.getItem('settings:bgm_id')) ?? 'rain';
+  const file = BGM_SOURCES[id] ?? DEFAULT_BGM;
+  if (!file) return;
+
   await setupAudioSession();
   await stopBgm();
 
-  const { sound } = await Audio.Sound.createAsync(BGM_FILE, {
+  const { sound } = await Audio.Sound.createAsync(file, {
     isLooping: true,
     volume: 0.4,
     shouldPlay: true,
@@ -27,7 +34,6 @@ export async function stopBgm(): Promise<void> {
   _sound = null;
 }
 
-// §9.6.1: 電話終了後などに BGM を自動再開する
 export async function resumeBgm(): Promise<void> {
   if (!_sound) return;
   try {

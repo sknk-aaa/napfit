@@ -12,7 +12,7 @@ import { router, useFocusEffect } from 'expo-router';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { getCompletedRecords, updateNapRecord } from '@/src/db/queries';
+import { getCompletedRecords, getInProgressRecords, updateNapRecord } from '@/src/db/queries';
 import { getRecommendedDuration, getStandardDurationStats } from '@/src/nap/statistics';
 import { generateComment } from '@/src/comments/generator';
 import { detectRecoveryRecord, formatRecoveryAge } from '@/src/nap/recovery';
@@ -27,6 +27,7 @@ export default function HomeScreen() {
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [records, setRecords] = useState<NapRecord[]>([]);
   const [recoveryRecord, setRecoveryRecord] = useState<NapRecord | null>(null);
+  const [hasActiveNap, setHasActiveNap] = useState(false);
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customDuration, setCustomDuration] = useState(25);
 
@@ -40,12 +41,18 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [completed, recovery] = await Promise.all([
+        const [completed, recovery, inProgress] = await Promise.all([
           getCompletedRecords(),
           detectRecoveryRecord(),
+          getInProgressRecords(),
         ]);
         setRecords(completed);
         setRecoveryRecord(recovery);
+        // recovery に含まれないアクティブな進行中仮眠（タイマー稼働中）を検出
+        const activeNap = inProgress.some(
+          (r) => r.id !== recovery?.id
+        );
+        setHasActiveNap(activeNap);
       })();
     }, [])
   );
@@ -70,7 +77,7 @@ export default function HomeScreen() {
   const isCustomSelected =
     selectedDuration !== null &&
     !(STANDARD_DURATIONS as readonly number[]).includes(selectedDuration);
-  const canStart = selectedDuration !== null && recoveryRecord === null;
+  const canStart = selectedDuration !== null && recoveryRecord === null && !hasActiveNap;
 
   function handleStartNap() {
     if (!canStart || selectedDuration === null) return;
@@ -156,6 +163,9 @@ export default function HomeScreen() {
       <View style={styles.bottom}>
         {recoveryRecord && (
           <Text style={styles.inProgressNote}>上のバナーで前回の記録を完了してから始めてください。</Text>
+        )}
+        {hasActiveNap && !recoveryRecord && (
+          <Text style={styles.inProgressNote}>仮眠中の記録があります。新しい仮眠は開始できません。</Text>
         )}
         <TouchableOpacity
           style={[styles.startButton, canStart && styles.startButtonActive]}
