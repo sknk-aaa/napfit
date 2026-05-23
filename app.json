@@ -19,7 +19,6 @@
       "deploymentTarget": "15.0",
       "infoPlist": {
         "UIBackgroundModes": [
-          "audio",
           "audio"
         ],
         "ITSAppUsesNonExemptEncryption": false
