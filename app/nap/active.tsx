@@ -80,7 +80,11 @@ export default function NapActiveScreen() {
       cancelled = true;
       deactivateKeepAwake();
       stopBgm();
-      stopAlarm();
+      // アラームが起動済みの場合は止めない（wake 画面で鳴らし続けるため）
+      // alarmFiredRef が false の場合（中断・エラー）のみ止める
+      if (!alarmFiredRef.current) {
+        stopAlarm();
+      }
       if (notifIdRef.current) {
         cancelNotification(notifIdRef.current);
         notifIdRef.current = null;
