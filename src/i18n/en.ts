@@ -68,9 +68,23 @@ export const en = {
 
   history: {
     title: 'History',
+    viewList: 'List',
+    viewCalendar: 'Calendar',
     summary: 'Last 10 naps',
-    emptyMessage: 'No nap records yet',
-    proCtaMessage: 'See your full history (Pro)',
+    emptyTitle: 'No records yet',
+    emptySub: 'Your naps will appear here once finished',
+    proCtaTitle: 'See your full history',
+    proCtaDesc: (hidden: number) =>
+      `${hidden} more records are hidden. Upgrade to NapFit Pro to see them all.`,
+    proCtaBtn: 'See Pro',
+    recordInterrupted: 'Stopped',
+    recordSkipped: 'Skipped',
+    close: 'Close',
+    countUnit: '',
+    weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    monthYear: (year: number, monthIndex: number) =>
+      `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex]} ${year}`,
+    dateLabel: (month: number, day: number, weekday: string) => `${weekday} ${month}/${day}`,
   },
 
   settings: {

@@ -68,9 +68,22 @@ export const ja = {
 
   history: {
     title: '履歴',
+    viewList: 'リスト',
+    viewCalendar: 'カレンダー',
     summary: '直近10回のまとめ',
-    emptyMessage: '仮眠の記録がありません',
-    proCtaMessage: '無制限の履歴を見る(Pro)',
+    emptyTitle: 'まだ記録がありません',
+    emptySub: '仮眠を終えると、ここに記録が残ります',
+    proCtaTitle: '無制限履歴を見る',
+    proCtaDesc: (hidden: number) =>
+      `${hidden}件の記録が隠れています。NapFit Pro にアップグレードすると全件閲覧できます。`,
+    proCtaBtn: 'Pro を見る',
+    recordInterrupted: '中断',
+    recordSkipped: 'スキップ',
+    close: '閉じる',
+    countUnit: '回',
+    weekdays: ['日', '月', '火', '水', '木', '金', '土'],
+    monthYear: (year: number, monthIndex: number) => `${year}年${monthIndex + 1}月`,
+    dateLabel: (month: number, day: number, weekday: string) => `${month}/${day} (${weekday})`,
   },
 
   settings: {
