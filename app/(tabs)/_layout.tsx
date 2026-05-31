@@ -1,30 +1,27 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
-import { Colors } from '@/src/theme/colors';
-
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
-  color: string;
-}) {
-  return <FontAwesome size={22} style={{ marginBottom: -3 }} {...props} />;
-}
+import { useTheme } from '@/src/theme/ThemeProvider';
+import { useT } from '@/src/i18n';
 
 export default function TabLayout() {
+  const { colors } = useTheme();
+  const t = useT();
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.tabActive,
-        tabBarInactiveTintColor: Colors.tabInactive,
+        tabBarActiveTintColor: colors.tabActive,
+        tabBarInactiveTintColor: colors.tabInactive,
         tabBarStyle: {
-          backgroundColor: Colors.tabBar,
-          borderTopColor: Colors.tabBarBorder,
+          backgroundColor: colors.tabBar,
+          borderTopColor: colors.tabBarBorder,
           height: 64,
           paddingBottom: 8,
         },
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '500',
+          fontWeight: '600',
           letterSpacing: 0.3,
         },
         headerShown: false,
@@ -33,22 +30,28 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'ホーム',
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+          title: t.tabs.home,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} style={{ marginBottom: -3 }} />
+          ),
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
-          title: '履歴',
-          tabBarIcon: ({ color }) => <TabBarIcon name="list" color={color} />,
+          title: t.tabs.history,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'list' : 'list-outline'} size={23} color={color} style={{ marginBottom: -3 }} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: '設定',
-          tabBarIcon: ({ color }) => <TabBarIcon name="gear" color={color} />,
+          title: t.tabs.settings,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'settings' : 'settings-outline'} size={21} color={color} style={{ marginBottom: -3 }} />
+          ),
         }}
       />
     </Tabs>
