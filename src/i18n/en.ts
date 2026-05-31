@@ -215,6 +215,32 @@ export const en = {
     restoreNoneBody: 'No previous purchase was found.',
   },
 
+  analytics: {
+    title: 'Analytics',
+    back: 'Back',
+    bestLabel: 'Your best nap length (diagnosis)',
+    freshRateBadge: (pct: number) => `${pct}% refreshed`,
+    bestEmpty: 'Log each length at least twice to see a diagnosis',
+    tabDuration: 'By length',
+    tabWeekday: 'By weekday',
+    tabTimeofday: 'By time',
+    chartTitle: 'Refresh rate (%)',
+    chartEmpty: 'Not enough data yet. Keep napping!',
+    reportTitle: 'Diagnostic report',
+    reportEmpty: (n: number) => `Log 5+ naps for a detailed report (currently ${n})`,
+    exportTitle: 'Data export',
+    exportCsv: 'Export as CSV',
+    exportJson: 'Export as JSON',
+    exportError: 'Export failed.',
+    timeSlots: ['6-9', '9-12', '12-15', '15-18', '18+'],
+    reportBestLength: (label: string, pct: number) =>
+      `${label} naps refresh you the most (${pct}%) — they suit you well.`,
+    reportWorstLength: (label: string, pct: number) =>
+      `${label} naps have a lower refresh rate (${pct}%). Try avoiding them.`,
+    reportBestWeekday: (label: string) => `You tend to feel refreshed after naps on ${label}.`,
+    reportNoPattern: 'Not enough data to spot a pattern yet. Keep logging!',
+  },
+
   errors: {
     generic: 'Something went wrong. Please try again.',
     notificationPermissionDenied:

@@ -214,6 +214,32 @@ export const ja = {
     restoreNoneBody: '購入履歴が見つかりませんでした。',
   },
 
+  analytics: {
+    title: '分析',
+    back: '戻る',
+    bestLabel: 'あなたの最適仮眠時間（診断）',
+    freshRateBadge: (pct: number) => `すっきり率 ${pct}%`,
+    bestEmpty: '各時間で2回以上記録すると診断が表示されます',
+    tabDuration: '時間別',
+    tabWeekday: '曜日別',
+    tabTimeofday: '時間帯別',
+    chartTitle: 'すっきり率（%）',
+    chartEmpty: '記録が少なすぎます。仮眠を続けましょう！',
+    reportTitle: '診断レポート',
+    reportEmpty: (n: number) => `5件以上記録すると詳細レポートが生成されます（現在 ${n} 件）`,
+    exportTitle: 'データエクスポート',
+    exportCsv: 'CSV でエクスポート',
+    exportJson: 'JSON でエクスポート',
+    exportError: 'エクスポートに失敗しました。',
+    timeSlots: ['6-9時', '9-12時', '12-15時', '15-18時', '18時以降'],
+    reportBestLength: (label: string, pct: number) =>
+      `${label}仮眠のすっきり率が最も高く（${pct}%）、あなたに向いています。`,
+    reportWorstLength: (label: string, pct: number) =>
+      `${label}仮眠はすっきり率が低め（${pct}%）。避けてみましょう。`,
+    reportBestWeekday: (label: string) => `${label}曜日の仮眠後はすっきりしやすい傾向があります。`,
+    reportNoPattern: 'まだパターンを分析するデータが足りません。記録を続けましょう！',
+  },
+
   errors: {
     generic: 'エラーが発生しました。もう一度お試しください。',
     notificationPermissionDenied: '通知が許可されていません。設定から通知を許可してください。',
