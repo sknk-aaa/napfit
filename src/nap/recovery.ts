@@ -1,5 +1,6 @@
 import { getInProgressRecords, updateNapRecord } from '@/src/db/queries';
 import type { NapRecord } from '@/src/types';
+import type { Translations } from '@/src/i18n';
 
 const RECOVERY_WINDOW_HOURS = 24;
 const RECOVERY_GRACE_MINUTES = 30;
@@ -30,10 +31,14 @@ export async function detectRecoveryRecord(): Promise<NapRecord | null> {
   return null;
 }
 
-export function formatRecoveryAge(startedAt: string, napDurationMinutes: number): string {
+export function formatRecoveryAge(
+  startedAt: string,
+  napDurationMinutes: number,
+  t: Translations
+): string {
   const endMs = new Date(startedAt).getTime() + napDurationMinutes * 60 * 1000;
   const diffMinutes = Math.floor((Date.now() - endMs) / (1000 * 60));
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours >= 1) return `${diffHours}時間前`;
-  return `${diffMinutes}分前`;
+  if (diffHours >= 1) return t.recovery.hoursAgo(diffHours);
+  return t.recovery.minutesAgo(diffMinutes);
 }

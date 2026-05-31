@@ -11,16 +11,27 @@ export const ja = {
   },
 
   home: {
+    greeting: 'こんにちは！',
+    greetingSub: '今日も、いい仮眠で整えましょう。',
     startButton: '仮眠をはじめる',
     customTimeLink: 'カスタム時間を設定',
+    custom: 'カスタム',
+    change: '変更',
+    minUnit: '分',
     keepScreenOn: 'この画面を開いたままにしてください',
     napDurationOptions: ['15分', '20分', '30分'],
     recommendCard: {
       title: 'あなたのおすすめ仮眠時間',
       unit: '分',
+      subtitle: 'すっきり率が最も高い時間です',
       notEnoughData: '記録を続けると、あなたのおすすめ仮眠時間が表示されます',
       proLink: 'もっと詳しく見る(Pro)',
     },
+    customModalTitle: 'カスタム時間を設定',
+    customModalSub: '5〜60分、1分刻みで選べます',
+    customModalConfirm: 'この時間で設定',
+    noteRecovery: '上のバナーで前回の記録を完了してから始めてください。',
+    noteActive: '仮眠中の記録があります。新しい仮眠は開始できません。',
   },
 
   napActive: {
@@ -108,9 +119,11 @@ export const ja = {
 
   recovery: {
     bannerTitle: (minutesAgo: string, duration: number) =>
-      `${minutesAgo}前の${duration}分仮眠が記録されていません`,
+      `${minutesAgo}の${duration}分仮眠が記録されていません`,
     bannerQuestion: 'どうでしたか?',
     skipButton: 'スキップ',
+    hoursAgo: (h: number) => `${h}時間前`,
+    minutesAgo: (m: number) => `${m}分前`,
   },
 
   comments: {

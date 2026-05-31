@@ -11,16 +11,27 @@ export const en = {
   },
 
   home: {
+    greeting: 'Hello!',
+    greetingSub: 'Recharge with a good nap today.',
     startButton: 'Start Nap',
     customTimeLink: 'Set a custom time',
+    custom: 'Custom',
+    change: 'Change',
+    minUnit: 'min',
     keepScreenOn: 'Please keep this screen open',
     napDurationOptions: ['15 min', '20 min', '30 min'],
     recommendCard: {
       title: 'Your recommended nap length',
       unit: 'min',
+      subtitle: 'Your highest refresh rate',
       notEnoughData: 'Keep logging naps and your recommended length will appear here',
       proLink: 'See more (Pro)',
     },
+    customModalTitle: 'Set a custom time',
+    customModalSub: 'Choose 5–60 min, in 1-min steps',
+    customModalConfirm: 'Set this time',
+    noteRecovery: 'Complete the previous record in the banner above before starting.',
+    noteActive: "A nap is in progress. You can't start a new one.",
   },
 
   napActive: {
@@ -108,9 +119,11 @@ export const en = {
 
   recovery: {
     bannerTitle: (minutesAgo: string, duration: number) =>
-      `Your ${duration}-min nap from ${minutesAgo} ago isn't recorded`,
+      `Your ${duration}-min nap from ${minutesAgo} isn't recorded`,
     bannerQuestion: 'How was it?',
     skipButton: 'Skip',
+    hoursAgo: (h: number) => `${h}h ago`,
+    minutesAgo: (m: number) => `${m}m ago`,
   },
 
   comments: {
