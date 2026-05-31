@@ -19,12 +19,17 @@ import { startBgm, stopBgm, resumeBgm, hasBgm } from '@/src/audio/bgm';
 import { startAlarm, stopAlarm } from '@/src/audio/alarm';
 import { getRemainingSeconds, formatTime } from '@/src/nap/timer';
 import { scheduleAlarmNotification, cancelNotification } from '@/src/notifications/schedule';
-import { Colors } from '@/src/theme/colors';
+import { useThemedStyles } from '@/src/theme/ThemeProvider';
+import { type ThemeColors } from '@/src/theme/colors';
+import { useT } from '@/src/i18n';
 import Sheep from '@/src/components/Sheep';
 
 export default function NapActiveScreen() {
   const { duration } = useLocalSearchParams<{ duration: string }>();
   const durationMinutes = Math.max(5, parseInt(duration ?? '20', 10) || 20);
+
+  const t = useT();
+  const styles = useThemedStyles(makeStyles);
 
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(durationMinutes * 60);
@@ -150,147 +155,110 @@ export default function NapActiveScreen() {
 
   // ---- 中断 ----
   function handleInterrupt() {
-    Alert.alert(
-      '仮眠を中断しますか?',
-      '',
-      [
-        { text: '続ける', style: 'cancel' },
-        {
-          text: '中断',
-          style: 'destructive',
-          onPress: async () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            if (notifIdRef.current) {
-              await cancelNotification(notifIdRef.current);
-              notifIdRef.current = null;
-            }
-            await stopBgm();
-            if (recordIdRef.current) {
-              await updateNapRecord(recordIdRef.current, {
-                status: 'interrupted',
-                endedAt: new Date().toISOString(),
-              });
-            }
-            router.replace('/(tabs)');
-          },
+    Alert.alert(t.napActive.interruptConfirmTitle, '', [
+      { text: t.napActive.interruptConfirmContinue, style: 'cancel' },
+      {
+        text: t.napActive.interruptConfirmStop,
+        style: 'destructive',
+        onPress: async () => {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          if (notifIdRef.current) {
+            await cancelNotification(notifIdRef.current);
+            notifIdRef.current = null;
+          }
+          await stopBgm();
+          if (recordIdRef.current) {
+            await updateNapRecord(recordIdRef.current, {
+              status: 'interrupted',
+              endedAt: new Date().toISOString(),
+            });
+          }
+          router.replace('/(tabs)');
         },
-      ]
-    );
+      },
+    ]);
   }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* ヘッダー */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeBtn} onPress={handleInterrupt} activeOpacity={0.7}>
           <Ionicons name="close" size={17} color="rgba(255,255,255,0.9)" />
         </TouchableOpacity>
-        <Text style={styles.keepOpenText}>この画面を開いたままにしてください</Text>
+        <Text style={styles.keepOpenText}>{t.napActive.keepScreenOn}</Text>
         <View style={styles.closeBtn} />
       </View>
 
-      {/* メインエリア */}
       <View style={styles.main}>
         <Sheep pose="sleep" size={120} />
 
-        {/* タイマー */}
         <View style={styles.timerBlock}>
           <Text style={styles.timerText}>{formatTime(remainingSeconds)}</Text>
           {bgmActive && (
             <View style={styles.bgmRow}>
               <Ionicons name="musical-notes" size={12} color="rgba(255,255,255,0.78)" />
-              <Text style={styles.bgmLabel}>BGM再生中</Text>
+              <Text style={styles.bgmLabel}>{t.napActive.bgmPlaying}</Text>
             </View>
           )}
         </View>
       </View>
 
-      {/* 下部: 中断ボタン */}
       <View style={styles.bottom}>
         <TouchableOpacity style={styles.stopBtn} onPress={handleInterrupt} activeOpacity={0.7}>
-          <Text style={styles.stopBtnText}>中断する</Text>
+          <Text style={styles.stopBtnText}>{t.napActive.stopButton}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.napBackground,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtnText: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
-  },
-  keepOpenText: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.82)',
-    fontWeight: '500',
-    letterSpacing: 0.2,
-  },
-  main: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 36,
-  },
-  timerBlock: {
-    alignItems: 'center',
-    gap: 10,
-  },
-  timerText: {
-    fontSize: 76,
-    fontWeight: '300',
-    color: '#FFFFFF',
-    letterSpacing: -2,
-    fontVariant: ['tabular-nums'],
-  },
-  bgmRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  bgmLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.78)',
-    fontWeight: '500',
-  },
-  bottom: {
-    alignItems: 'center',
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-  },
-  stopBtn: {
-    width: '100%',
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stopBtnText: {
-    fontSize: 14,
-    color: Colors.ink,
-    fontWeight: '700',
-  },
-});
+// 仮眠中は時間帯に関わらず常に「夜の青」基調。背景色のみテーマに追従させ、
+// その上の文字・ボタンは白系で固定する。
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.napBackground },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 4,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: 'rgba(255,255,255,0.18)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    keepOpenText: {
+      flex: 1,
+      textAlign: 'center',
+      fontSize: 12,
+      color: 'rgba(255,255,255,0.82)',
+      fontWeight: '500',
+      letterSpacing: 0.2,
+    },
+    main: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 36 },
+    timerBlock: { alignItems: 'center', gap: 10 },
+    timerText: {
+      fontSize: 76,
+      fontWeight: '300',
+      color: '#FFFFFF',
+      letterSpacing: -2,
+      fontVariant: ['tabular-nums'],
+    },
+    bgmRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    bgmLabel: { fontSize: 12, color: 'rgba(255,255,255,0.78)', fontWeight: '500' },
+    bottom: { alignItems: 'center', paddingBottom: 24, paddingHorizontal: 20 },
+    stopBtn: {
+      width: '100%',
+      height: 48,
+      borderRadius: 14,
+      backgroundColor: '#FFFFFF',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    stopBtnText: { fontSize: 14, color: '#2E3A4F', fontWeight: '700' },
+  });
