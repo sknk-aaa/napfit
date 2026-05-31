@@ -184,6 +184,37 @@ export const en = {
       `${minutes}-min naps felt okay ${count} of ${total} times`,
   },
 
+  proModal: {
+    heroSub: 'Analyze your naps more deeply',
+    features: [
+      { title: 'Analytics dashboard', desc: 'Visualize refresh rates by time and weekday' },
+      { title: 'Calendar view', desc: 'See your naps month by month at a glance' },
+      { title: 'Unlimited history', desc: 'View every record beyond the latest 10' },
+      { title: 'Data export', desc: 'Export your data as CSV or JSON' },
+    ],
+    planMonthly: 'Monthly',
+    planLifetime: 'One-time',
+    perMonth: '/mo',
+    oneTimeNote: 'Pay once, yours forever',
+    loadingPrice: 'Loading price...',
+    unavailable: "Couldn't load purchase info",
+    purchaseCta: 'Purchase',
+    subscribeCta: 'Subscribe',
+    retry: 'Reload purchase info',
+    restore: 'Restore purchases',
+    legal: 'Payment is charged to your Apple ID. Subscriptions auto-renew unless canceled at least 24 hours before the period ends.',
+    successTitle: 'Thank you!',
+    successBody: 'Pro features are now active.',
+    pendingTitle: 'Purchase pending',
+    pendingBody: 'Pro features unlock once the purchase is approved.',
+    noEntitlementTitle: 'Verifying your purchase',
+    noEntitlementBody: 'If Pro stays inactive after restoring, please contact support.',
+    errorTitle: "Couldn't complete the purchase",
+    errorBody: 'Please check your connection and try again.',
+    restoreNoneTitle: 'Nothing to restore',
+    restoreNoneBody: 'No previous purchase was found.',
+  },
+
   errors: {
     generic: 'Something went wrong. Please try again.',
     notificationPermissionDenied:

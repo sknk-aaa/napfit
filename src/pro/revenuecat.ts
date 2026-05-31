@@ -92,31 +92,44 @@ export async function isPro(): Promise<boolean> {
   }
 }
 
-export async function getProProduct(): Promise<ProProduct | null> {
+export type ProPlans = {
+  lifetime: ProProduct | null;
+  monthly: ProProduct | null;
+};
+
+// current Offering の package を、サブスク/買い切りに自動振り分けする。
+// 商品IDをコードに足さず、App Store Connect + RevenueCat 側で Offering に
+// 追加するだけで月額が出るようにしている。価格は priceString をそのまま表示。
+export async function getProPlans(): Promise<ProPlans> {
   try {
     await ensureConfigured();
+    let lifetime: ProProduct | null = null;
+    let monthly: ProProduct | null = null;
 
     try {
       const offerings = await Purchases.getOfferings();
-      const offeringPackage = offerings.current?.availablePackages.find(
-        (pkg) => pkg.product.identifier === PRO_PRODUCT_ID
-      );
-      if (offeringPackage) {
-        return { product: offeringPackage.product, package: offeringPackage };
+      const pkgs = offerings.current?.availablePackages ?? [];
+      for (const pkg of pkgs) {
+        if (pkg.product.productCategory === PRODUCT_CATEGORY.SUBSCRIPTION) {
+          if (!monthly) monthly = { product: pkg.product, package: pkg };
+        } else if (!lifetime) {
+          lifetime = { product: pkg.product, package: pkg };
+        }
       }
     } catch {
-      // Fetch directly below when an Offering is unavailable or misconfigured.
+      // Offering 未設定時は下で買い切りを直接取得
     }
 
-    // The purchase still works when a RevenueCat Offering is not being used.
-    const products = await Purchases.getProducts(
-      [PRO_PRODUCT_ID],
-      PRODUCT_CATEGORY.NON_SUBSCRIPTION
-    );
-    const product = products.find((candidate) => candidate.identifier === PRO_PRODUCT_ID);
-    return product ? { product, package: null } : null;
+    // Offering を使わない場合のフォールバック（買い切りのみ）
+    if (!lifetime) {
+      const products = await Purchases.getProducts([PRO_PRODUCT_ID], PRODUCT_CATEGORY.NON_SUBSCRIPTION);
+      const product = products.find((candidate) => candidate.identifier === PRO_PRODUCT_ID);
+      if (product) lifetime = { product, package: null };
+    }
+
+    return { lifetime, monthly };
   } catch {
-    return null;
+    return { lifetime: null, monthly: null };
   }
 }
 
