@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { router } from 'expo-router';
 import * as Notifications from 'expo-notifications';
@@ -105,19 +106,19 @@ export default function SettingsScreen() {
         {/* メイン設定 */}
         <View style={styles.listCard}>
           <SettingRow
-            icon="🔔"
+            icon="notifications-outline"
             label="通知設定"
             detail={notifLabel}
             onPress={notifStatus !== 'granted' ? handleNotifRow : undefined}
           />
           <SettingRow
-            icon="🎵"
+            icon="musical-notes-outline"
             label="BGM選択"
             detail={bgmLabel}
             onPress={() => setBgmModalVisible(true)}
           />
           <SettingRow
-            icon="⏰"
+            icon="alarm-outline"
             label="アラーム音"
             detail="シンプルベル"
             isLast
@@ -128,7 +129,8 @@ export default function SettingsScreen() {
         <View style={[styles.listCard, { marginTop: 14 }]}>
           {isPro ? (
             <SettingRow
-              icon="👑"
+              icon="sparkles"
+              tint={Colors.yellowBtn}
               label="NapFit Pro"
               detail="ご利用中"
               isLast
@@ -136,13 +138,14 @@ export default function SettingsScreen() {
           ) : (
             <>
               <SettingRow
-                icon="👑"
+                icon="sparkles"
+                tint={Colors.yellowBtn}
                 label="NapFit Pro"
                 detail="機能をアップグレード"
                 onPress={() => router.push('/pro-modal')}
               />
               <SettingRow
-                icon="🔄"
+                icon="refresh-outline"
                 label="購入を復元"
                 detail={restoring ? '復元中...' : 'Restore Purchases'}
                 onPress={restoring ? undefined : handleRestore}
@@ -155,24 +158,24 @@ export default function SettingsScreen() {
         {/* 情報 */}
         <View style={[styles.listCard, { marginTop: 14 }]}>
           <SettingRow
-            icon="📊"
+            icon="stats-chart-outline"
             label="分析ダッシュボード"
             detail={isPro ? '' : 'Pro'}
             isPro={!isPro}
             onPress={() => isPro ? router.push('/analytics') : router.push('/pro-modal')}
           />
           <SettingRow
-            icon="🔒"
+            icon="lock-closed-outline"
             label="プライバシーポリシー"
             onPress={() => Linking.openURL('https://sknk-aaa.github.io/napfit/privacy.html')}
           />
           <SettingRow
-            icon="📄"
+            icon="document-text-outline"
             label="利用規約"
             onPress={() => Linking.openURL('https://sknk-aaa.github.io/napfit/terms.html')}
           />
           <SettingRow
-            icon="ℹ️"
+            icon="information-circle-outline"
             label="アプリ情報"
             detail="v1.0.0"
             isLast
@@ -203,13 +206,15 @@ function SettingRow({
   onPress,
   isPro,
   isLast,
+  tint,
 }: {
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   detail?: string;
   onPress?: () => void;
   isPro?: boolean;
   isLast?: boolean;
+  tint?: string;
 }) {
   return (
     <TouchableOpacity
@@ -218,11 +223,15 @@ function SettingRow({
       activeOpacity={onPress ? 0.65 : 1}
       disabled={!onPress}
     >
-      <Text style={styles.rowIcon}>{icon}</Text>
+      <View style={styles.rowIcon}>
+        <Ionicons name={icon} size={19} color={tint ?? Colors.primary} />
+      </View>
       <Text style={styles.rowLabel}>{label}</Text>
       {isPro && <ProBadge />}
       {detail ? <Text style={styles.rowDetail}>{detail}</Text> : null}
-      {onPress && <Text style={styles.chevron}>›</Text>}
+      {onPress && (
+        <Ionicons name="chevron-forward" size={16} color={Colors.ink4} style={styles.chevron} />
+      )}
     </TouchableOpacity>
   );
 }
@@ -274,7 +283,7 @@ function SelectModal({
               >
                 {opt.label}
               </Text>
-              {selectedId === opt.id && <Text style={modalStyles.checkmark}>✓</Text>}
+              {selectedId === opt.id && <Ionicons name="checkmark" size={16} color={Colors.primary} />}
             </TouchableOpacity>
           ))}
         </Pressable>
@@ -328,9 +337,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.divider,
   },
   rowIcon: {
-    fontSize: 18,
     width: 28,
-    textAlign: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rowLabel: {
     flex: 1,
@@ -344,11 +353,8 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   chevron: {
-    fontSize: 20,
-    color: Colors.ink4,
-    lineHeight: 22,
     width: 16,
-    textAlign: 'center',
+    marginLeft: 2,
   },
   proBadge: {
     backgroundColor: Colors.primaryChip,

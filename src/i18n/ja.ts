@@ -25,7 +25,7 @@ export const ja = {
 
   napActive: {
     keepScreenOn: 'この画面を開いたままにしてください',
-    bgmPlaying: '♪ BGM再生中',
+    bgmPlaying: 'BGM再生中',
     stopButton: '中断する',
     interruptConfirmTitle: '仮眠を中断しますか?',
     interruptConfirmStop: '中断',

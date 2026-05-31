@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Modal,
   Pressable,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
@@ -22,6 +23,12 @@ import type { DurationStats } from '@/src/nap/statistics';
 import type { NapRecord, NapResult } from '@/src/types';
 
 const STANDARD_DURATIONS = [15, 20, 30] as const;
+
+const RESULT_SHEEP = {
+  fresh: require('@/assets/images/sheep/fresh.png'),
+  normal: require('@/assets/images/sheep/normal.png'),
+  sluggish: require('@/assets/images/sheep/sluggish.png'),
+};
 
 export default function HomeScreen() {
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
@@ -232,21 +239,24 @@ function RecoveryBanner({
           onPress={() => onSelect('fresh')}
           activeOpacity={0.7}
         >
-          <Text style={[bannerStyles.btnText, { color: Colors.freshInk }]}>😊 すっきり</Text>
+          <Image source={RESULT_SHEEP.fresh} style={bannerStyles.btnIcon} resizeMode="contain" />
+          <Text style={[bannerStyles.btnText, { color: Colors.freshInk }]}>すっきり</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[bannerStyles.btn, { backgroundColor: Colors.normalBg }]}
           onPress={() => onSelect('normal')}
           activeOpacity={0.7}
         >
-          <Text style={[bannerStyles.btnText, { color: Colors.normalInk }]}>😐 普通</Text>
+          <Image source={RESULT_SHEEP.normal} style={bannerStyles.btnIcon} resizeMode="contain" />
+          <Text style={[bannerStyles.btnText, { color: Colors.normalInk }]}>普通</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[bannerStyles.btn, { backgroundColor: Colors.sluggishBg }]}
           onPress={() => onSelect('sluggish')}
           activeOpacity={0.7}
         >
-          <Text style={[bannerStyles.btnText, { color: Colors.sluggishInk }]}>😞 だるい</Text>
+          <Image source={RESULT_SHEEP.sluggish} style={bannerStyles.btnIcon} resizeMode="contain" />
+          <Text style={[bannerStyles.btnText, { color: Colors.sluggishInk }]}>だるい</Text>
         </TouchableOpacity>
       </View>
       <TouchableOpacity onPress={() => onSelect(null)} activeOpacity={0.7}>
@@ -570,7 +580,14 @@ const bannerStyles = StyleSheet.create({
     flex: 1,
     borderRadius: 10,
     paddingVertical: 7,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  btnIcon: {
+    width: 16,
+    height: 16,
   },
   btnText: {
     fontSize: 11,

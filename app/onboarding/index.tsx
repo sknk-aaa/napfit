@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Image,
+  ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -23,6 +25,13 @@ type Step = {
   title: string;
   body: string;
   accent?: string;
+  accentImages?: ImageSourcePropType[];
+};
+
+const SHEEP = {
+  fresh: require('@/assets/images/sheep/fresh.png'),
+  normal: require('@/assets/images/sheep/normal.png'),
+  sluggish: require('@/assets/images/sheep/sluggish.png'),
 };
 
 const STEPS: Step[] = [
@@ -41,7 +50,7 @@ const STEPS: Step[] = [
     pose: 'alert',
     title: '起きた感じを記録',
     body: '「すっきり」「普通」「だるい」の\n3択を1タップで。スキップもOK。',
-    accent: '😊 / 😐 / 😞',
+    accentImages: [SHEEP.fresh, SHEEP.normal, SHEEP.sluggish],
   },
   {
     pose: 'read',
@@ -88,11 +97,17 @@ export default function OnboardingScreen() {
         <View style={styles.textBlock}>
           <Text style={styles.title}>{current.title}</Text>
           <Text style={styles.body}>{current.body}</Text>
-          {current.accent && (
+          {current.accentImages ? (
+            <View style={styles.accentSheepRow}>
+              {current.accentImages.map((img, i) => (
+                <Image key={i} source={img} style={styles.accentSheep} resizeMode="contain" />
+              ))}
+            </View>
+          ) : current.accent ? (
             <View style={styles.accentBadge}>
               <Text style={styles.accentText}>{current.accent}</Text>
             </View>
-          )}
+          ) : null}
         </View>
       </View>
 
@@ -174,6 +189,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.primary,
     letterSpacing: 1,
+  },
+  accentSheepRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 4,
+    alignItems: 'center',
+  },
+  accentSheep: {
+    width: 52,
+    height: 52,
   },
   dots: {
     flexDirection: 'row',

@@ -9,6 +9,7 @@ import {
   AppStateStatus,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as Crypto from 'expo-crypto';
@@ -182,7 +183,7 @@ export default function NapActiveScreen() {
       {/* ヘッダー */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeBtn} onPress={handleInterrupt} activeOpacity={0.7}>
-          <Text style={styles.closeBtnText}>✕</Text>
+          <Ionicons name="close" size={17} color="rgba(255,255,255,0.9)" />
         </TouchableOpacity>
         <Text style={styles.keepOpenText}>この画面を開いたままにしてください</Text>
         <View style={styles.closeBtn} />
@@ -196,7 +197,10 @@ export default function NapActiveScreen() {
         <View style={styles.timerBlock}>
           <Text style={styles.timerText}>{formatTime(remainingSeconds)}</Text>
           {bgmActive && (
-            <Text style={styles.bgmLabel}>♪ BGM再生中</Text>
+            <View style={styles.bgmRow}>
+              <Ionicons name="musical-notes" size={12} color="rgba(255,255,255,0.78)" />
+              <Text style={styles.bgmLabel}>BGM再生中</Text>
+            </View>
           )}
         </View>
       </View>
@@ -260,6 +264,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: -2,
     fontVariant: ['tabular-nums'],
+  },
+  bgmRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   bgmLabel: {
     fontSize: 12,

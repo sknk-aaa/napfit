@@ -7,8 +7,11 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
+  Image,
+  ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 
 import { getCompletedRecords, getNapRecords } from '@/src/db/queries';
@@ -19,10 +22,10 @@ import type { NapRecord, NapResult } from '@/src/types';
 
 const FREE_LIMIT = 10;
 
-const RESULT_CONFIG: Record<NapResult, { label: string; face: string; ink: string }> = {
-  fresh:    { label: 'すっきり', face: '😊', ink: Colors.freshInk },
-  normal:   { label: '普通',     face: '😐', ink: Colors.normalInk },
-  sluggish: { label: 'だるい',   face: '😞', ink: Colors.sluggishInk },
+const RESULT_CONFIG: Record<NapResult, { label: string; image: ImageSourcePropType; ink: string }> = {
+  fresh:    { label: 'すっきり', image: require('@/assets/images/sheep/fresh.png'),    ink: Colors.freshInk },
+  normal:   { label: '普通',     image: require('@/assets/images/sheep/normal.png'),   ink: Colors.normalInk },
+  sluggish: { label: 'だるい',   image: require('@/assets/images/sheep/sluggish.png'), ink: Colors.sluggishInk },
 };
 
 function formatDate(isoString: string): string {
@@ -150,7 +153,10 @@ export default function HistoryScreen() {
                 onPress={() => router.push('/pro-modal')}
                 activeOpacity={0.8}
               >
-                <Text style={styles.proCtaTitle}>👑 無制限履歴を見る</Text>
+                <View style={styles.proCtaTitleRow}>
+                  <Ionicons name="sparkles" size={15} color={Colors.primary} />
+                  <Text style={styles.proCtaTitle}>無制限履歴を見る</Text>
+                </View>
                 <Text style={styles.proCtaDesc}>
                   {records.length - FREE_LIMIT}件の記録が隠れています。
                   NapFit Pro にアップグレードすると全件閲覧できます。
@@ -251,7 +257,7 @@ function CalendarView({
             >
               <Text style={[calStyles.dayNum, isToday && calStyles.dayNumToday]}>{day}</Text>
               {best && (
-                <Text style={calStyles.face}>{RESULT_CONFIG[best].face}</Text>
+                <Image source={RESULT_CONFIG[best].image} style={calStyles.face} resizeMode="contain" />
               )}
             </TouchableOpacity>
           );
@@ -277,7 +283,7 @@ function DayModal({ records, onClose }: { records: NapRecord[]; onClose: () => v
                 {cfg ? (
                   <>
                     <Text style={[dayModalStyles.tag, { color: cfg.ink }]}>{cfg.label}</Text>
-                    <Text style={dayModalStyles.face}>{cfg.face}</Text>
+                    <Image source={cfg.image} style={dayModalStyles.face} resizeMode="contain" />
                   </>
                 ) : (
                   <Text style={dayModalStyles.skipped}>
@@ -316,7 +322,7 @@ function RecordRow({ record, isLast }: { record: NapRecord; isLast: boolean }) {
       {cfg ? (
         <>
           <Text style={[styles.recordTag, { color: cfg.ink }]}>{cfg.label}</Text>
-          <Text style={styles.recordFace}>{cfg.face}</Text>
+          <Image source={cfg.image} style={styles.recordFace} resizeMode="contain" />
         </>
       ) : (
         <Text style={styles.recordSkipped}>
@@ -478,7 +484,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   recordFace: {
-    fontSize: 20,
+    width: 26,
+    height: 26,
   },
   recordSkipped: {
     fontSize: 11.5,
@@ -490,6 +497,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: Colors.primaryChip,
+    gap: 6,
+  },
+  proCtaTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   proCtaTitle: {
@@ -588,8 +600,8 @@ const calStyles = StyleSheet.create({
     fontWeight: '700',
   },
   face: {
-    fontSize: 14,
-    lineHeight: 18,
+    width: 18,
+    height: 18,
   },
 });
 
@@ -641,7 +653,8 @@ const dayModalStyles = StyleSheet.create({
     marginRight: 4,
   },
   face: {
-    fontSize: 18,
+    width: 24,
+    height: 24,
   },
   skipped: {
     fontSize: 12,

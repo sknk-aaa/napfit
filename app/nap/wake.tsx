@@ -9,6 +9,7 @@ import {
   ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { stopAlarm } from '@/src/audio/alarm';
@@ -112,7 +113,8 @@ export default function NapWakeScreen() {
       )}
 
       <Animated.View style={[styles.toast, { opacity: toastOpacity }]} pointerEvents="none">
-        <Text style={styles.toastText}>記録しました ✓</Text>
+        <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+        <Text style={styles.toastText}>記録しました</Text>
       </Animated.View>
     </SafeAreaView>
   );
@@ -309,7 +311,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.ink,
     borderRadius: 12,
     paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 7,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.16,

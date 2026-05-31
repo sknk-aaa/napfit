@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import {
@@ -22,11 +23,11 @@ import { setProActive } from '@/src/pro/gate';
 import { Colors } from '@/src/theme/colors';
 import Sheep from '@/src/components/Sheep';
 
-const PRO_FEATURES = [
-  { icon: '📊', title: '分析ダッシュボード', desc: '時間帯別・曜日別のすっきり率を可視化' },
-  { icon: '📅', title: 'カレンダー表示', desc: '月単位で仮眠記録をひと目で確認' },
-  { icon: '∞', title: '無制限の履歴', desc: '直近10件を超えた記録もすべて閲覧' },
-  { icon: '📤', title: 'データエクスポート', desc: 'CSV・JSON形式でデータを書き出し' },
+const PRO_FEATURES: { icon: keyof typeof Ionicons.glyphMap; title: string; desc: string }[] = [
+  { icon: 'stats-chart', title: '分析ダッシュボード', desc: '時間帯別・曜日別のすっきり率を可視化' },
+  { icon: 'calendar', title: 'カレンダー表示', desc: '月単位で仮眠記録をひと目で確認' },
+  { icon: 'infinite', title: '無制限の履歴', desc: '直近10件を超えた記録もすべて閲覧' },
+  { icon: 'download-outline', title: 'データエクスポート', desc: 'CSV・JSON形式でデータを書き出し' },
 ];
 
 export default function ProModalScreen() {
@@ -94,7 +95,7 @@ export default function ProModalScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
-        <Text style={styles.closeBtnText}>✕</Text>
+        <Ionicons name="close" size={18} color={Colors.ink2} />
       </TouchableOpacity>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -107,7 +108,9 @@ export default function ProModalScreen() {
         <View style={styles.featureList}>
           {PRO_FEATURES.map((f) => (
             <View key={f.title} style={styles.featureRow}>
-              <Text style={styles.featureIcon}>{f.icon}</Text>
+              <View style={styles.featureIcon}>
+                <Ionicons name={f.icon} size={22} color={Colors.primary} />
+              </View>
               <View style={styles.featureText}>
                 <Text style={styles.featureTitle}>{f.title}</Text>
                 <Text style={styles.featureDesc}>{f.desc}</Text>
@@ -213,9 +216,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   featureIcon: {
-    fontSize: 22,
     width: 32,
-    textAlign: 'center',
+    alignItems: 'center',
   },
   featureText: {
     flex: 1,
