@@ -1,0 +1,108 @@
+export const en = {
+  app: {
+    name: 'NapFit',
+    subtitle: 'Find your ideal nap length',
+  },
+
+  tabs: {
+    home: 'Home',
+    history: 'History',
+    settings: 'Settings',
+  },
+
+  home: {
+    startButton: 'Start Nap',
+    customTimeLink: 'Set a custom time',
+    keepScreenOn: 'Please keep this screen open',
+    napDurationOptions: ['15 min', '20 min', '30 min'],
+    recommendCard: {
+      title: 'Your recommended nap length',
+      unit: 'min',
+      notEnoughData: 'Keep logging naps and your recommended length will appear here',
+      proLink: 'See more (Pro)',
+    },
+  },
+
+  napActive: {
+    keepScreenOn: 'Please keep this screen open',
+    bgmPlaying: 'BGM playing',
+    stopButton: 'Stop',
+    interruptConfirmTitle: 'Stop this nap?',
+    interruptConfirmStop: 'Stop',
+    interruptConfirmContinue: 'Continue',
+  },
+
+  napWake: {
+    phase1Title: 'Good morning!',
+    phase1Subtitle: "It's time to wake up",
+    stopAlarmButton: 'Stop alarm',
+    skipLink: "Skip (don't record)",
+    skipNote: 'Your nap record is still kept if you skip',
+    phase2Title: 'How do you feel?',
+    phase2Subtitle: "Log today's condition",
+    resultNote: 'Logging reveals the nap length that suits you',
+    recordedToast: 'Recorded',
+  },
+
+  results: {
+    fresh: 'Refreshed',
+    freshDesc: 'Feel well rested',
+    normal: 'Okay',
+    normalDesc: 'So-so',
+    sluggish: 'Groggy',
+    sluggishDesc: 'Still heavy and sleepy',
+    skipped: '—',
+    interrupted: 'Stopped',
+  },
+
+  history: {
+    title: 'History',
+    summary: 'Last 10 naps',
+    emptyMessage: 'No nap records yet',
+    proCtaMessage: 'See your full history (Pro)',
+  },
+
+  settings: {
+    title: 'Settings',
+    bgmTitle: 'BGM',
+    notificationTitle: 'Notifications',
+    notificationEnabled: 'Notifications are enabled',
+    notificationDisabled: 'Notifications are disabled',
+    notificationGoToSettings: 'Open system settings',
+    privacyPolicy: 'Privacy Policy',
+    termsOfService: 'Terms of Service',
+    appInfo: 'App Info',
+    proPurchase: 'NapFit Pro - Upgrade features',
+    proRestore: 'Restore purchases',
+    proMember: 'Pro member',
+  },
+
+  recovery: {
+    bannerTitle: (minutesAgo: string, duration: number) =>
+      `Your ${duration}-min nap from ${minutesAgo} ago isn't recorded`,
+    bannerQuestion: 'How was it?',
+    skipButton: 'Skip',
+  },
+
+  comments: {
+    noRecord: 'Log your naps to find the length that suits you',
+    fewRecords1_2: 'Keep logging and your ideal nap length will emerge',
+    fewRecords3_4: (remaining: number) => `${remaining} more to start seeing your trend`,
+    freshStreak: (count: number) => `You've felt refreshed ${count} naps in a row`,
+    sluggishStreak: (count: number) => `You've felt groggy on most of your last ${count} naps`,
+    normalStreak: (count: number) => `Mostly okay across your last ${count} naps`,
+    bestTime: (minutes: number) => `Your most refreshing nap so far is ${minutes} min`,
+    freshMany: (minutes: number, count: number, total: number) =>
+      `${minutes}-min naps left you refreshed ${count} of ${total} times`,
+    sluggishMany: (minutes: number, count: number, total: number) =>
+      `${minutes}-min naps left you groggy ${count} of ${total} times`,
+    normalMany: (minutes: number, count: number, total: number) =>
+      `${minutes}-min naps felt okay ${count} of ${total} times`,
+  },
+
+  errors: {
+    generic: 'Something went wrong. Please try again.',
+    notificationPermissionDenied:
+      'Notifications are disabled. Please enable them in Settings.',
+  },
+} as const;

@@ -7,6 +7,8 @@ import { setupNotificationHandler } from '@/src/notifications/schedule';
 import { loadProStatus } from '@/src/pro/gate';
 import { initRevenueCat, isPro } from '@/src/pro/revenuecat';
 import { setProActive } from '@/src/pro/gate';
+import { ThemeProvider } from '@/src/theme/ThemeProvider';
+import { LocaleProvider } from '@/src/i18n';
 
 setupNotificationHandler();
 
@@ -54,12 +56,16 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="nap" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
-      <Stack.Screen name="analytics" options={{ headerShown: false }} />
-      <Stack.Screen name="pro-modal" options={{ headerShown: false, presentation: 'modal' }} />
-      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-    </Stack>
+    <ThemeProvider>
+      <LocaleProvider>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="nap" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+          <Stack.Screen name="analytics" options={{ headerShown: false }} />
+          <Stack.Screen name="pro-modal" options={{ headerShown: false, presentation: 'modal' }} />
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        </Stack>
+      </LocaleProvider>
+    </ThemeProvider>
   );
 }
