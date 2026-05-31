@@ -24,37 +24,25 @@ import { restorePurchases } from '@/src/pro/revenuecat';
 
 const BGM_OPTIONS = [
   { id: 'rain', label: 'やさしい雨音' },
-  { id: 'piano', label: 'やさしいピアノ' },
-  { id: 'white', label: 'ホワイトノイズ' },
-] as const;
-
-const ALARM_OPTIONS = [
-  { id: 'bell', label: 'シンプルベル' },
-  { id: 'chime', label: 'やわらかチャイム' },
-  { id: 'nature', label: '自然の音' },
 ] as const;
 
 type BgmId = typeof BGM_OPTIONS[number]['id'];
-type AlarmId = typeof ALARM_OPTIONS[number]['id'];
 
 export default function SettingsScreen() {
   const [notifStatus, setNotifStatus] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
   const [bgmId, setBgmId] = useState<BgmId>('rain');
-  const [alarmId, setAlarmId] = useState<AlarmId>('bell');
   const [bgmModalVisible, setBgmModalVisible] = useState(false);
-  const [alarmModalVisible, setAlarmModalVisible] = useState(false);
   const [restoring, setRestoring] = useState(false);
-  const isPro = isProActive();
+  const [isPro, setIsPro] = useState(() => isProActive());
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
+        setIsPro(isProActive());
         const { status } = await Notifications.getPermissionsAsync();
         setNotifStatus(status as 'granted' | 'denied' | 'undetermined');
         const storedBgm = await AsyncStorage.getItem('settings:bgm_id');
         if (storedBgm) setBgmId(storedBgm as BgmId);
-        const storedAlarm = await AsyncStorage.getItem('settings:alarm_sound_id');
-        if (storedAlarm) setAlarmId(storedAlarm as AlarmId);
       })();
     }, [])
   );
@@ -81,21 +69,18 @@ export default function SettingsScreen() {
     setBgmModalVisible(false);
   }
 
-  async function handleSelectAlarm(id: AlarmId) {
-    setAlarmId(id);
-    await AsyncStorage.setItem('settings:alarm_sound_id', id);
-    setAlarmModalVisible(false);
-  }
-
   async function handleRestore() {
     setRestoring(true);
-    const success = await restorePurchases();
+    const result = await restorePurchases();
     setRestoring(false);
-    if (success) {
+    if (result.status === 'success') {
       setProActive(true);
+      setIsPro(true);
       Alert.alert('復元しました', 'Pro機能が有効になりました。');
-    } else {
+    } else if (result.status === 'no_entitlement') {
       Alert.alert('復元できませんでした', '購入履歴が見つかりませんでした。');
+    } else if (result.status === 'error') {
+      Alert.alert('復元を完了できませんでした', '通信状況をご確認のうえ、再度お試しください。');
     }
   }
 
@@ -107,7 +92,6 @@ export default function SettingsScreen() {
       : '未設定';
 
   const bgmLabel = BGM_OPTIONS.find((b) => b.id === bgmId)?.label ?? '—';
-  const alarmLabel = ALARM_OPTIONS.find((a) => a.id === alarmId)?.label ?? '—';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -135,16 +119,7 @@ export default function SettingsScreen() {
           <SettingRow
             icon="⏰"
             label="アラーム音"
-            detail={alarmLabel}
-            isPro
-            onPress={isPro ? () => setAlarmModalVisible(true) : () => router.push('/pro-modal')}
-          />
-          <SettingRow
-            icon="🌗"
-            label="テーマ"
-            detail="ライトモード"
-            isPro
-            onPress={() => router.push('/pro-modal')}
+            detail="シンプルベル"
             isLast
           />
         </View>
@@ -170,7 +145,7 @@ export default function SettingsScreen() {
                 icon="🔄"
                 label="購入を復元"
                 detail={restoring ? '復元中...' : 'Restore Purchases'}
-                onPress={handleRestore}
+                onPress={restoring ? undefined : handleRestore}
                 isLast
               />
             </>
@@ -217,15 +192,6 @@ export default function SettingsScreen() {
         onClose={() => setBgmModalVisible(false)}
       />
 
-      {/* アラーム音選択モーダル */}
-      <SelectModal
-        visible={alarmModalVisible}
-        title="アラーム音を選択"
-        options={ALARM_OPTIONS.map((a) => ({ id: a.id, label: a.label }))}
-        selectedId={alarmId}
-        onSelect={(id) => handleSelectAlarm(id as AlarmId)}
-        onClose={() => setAlarmModalVisible(false)}
-      />
     </SafeAreaView>
   );
 }

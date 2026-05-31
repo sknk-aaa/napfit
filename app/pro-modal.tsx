@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import type { PurchasesPackage } from 'react-native-purchases';
 
-import { getProPackage, purchasePro, restorePurchases } from '@/src/pro/revenuecat';
+import {
+  getProProduct,
+  purchasePro,
+  restorePurchases,
+  type ProOperationResult,
+  type ProProduct,
+} from '@/src/pro/revenuecat';
 import { setProActive } from '@/src/pro/gate';
 import { Colors } from '@/src/theme/colors';
 import Sheep from '@/src/components/Sheep';
@@ -22,51 +27,69 @@ const PRO_FEATURES = [
   { icon: '📅', title: 'カレンダー表示', desc: '月単位で仮眠記録をひと目で確認' },
   { icon: '∞', title: '無制限の履歴', desc: '直近10件を超えた記録もすべて閲覧' },
   { icon: '📤', title: 'データエクスポート', desc: 'CSV・JSON形式でデータを書き出し' },
-  { icon: '🌗', title: 'テーマ選択', desc: 'ライト/ダークモードを自由に選択' },
-  { icon: '⏰', title: 'アラーム音の選択', desc: '複数のアラーム音から好みを選べる' },
 ];
 
 export default function ProModalScreen() {
-  const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [product, setProduct] = useState<ProProduct | null>(null);
+  const [productLoading, setProductLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
 
-  useEffect(() => {
-    getProPackage().then(setPkg);
+  const loadProduct = useCallback(async () => {
+    setProductLoading(true);
+    const nextProduct = await getProProduct();
+    setProduct(nextProduct);
+    setProductLoading(false);
   }, []);
 
-  async function handlePurchase() {
-    if (!pkg) {
-      Alert.alert('エラー', '購入情報を取得できません。しばらくしてからお試しください。');
-      return;
-    }
-    setLoading(true);
-    const success = await purchasePro(pkg);
-    setLoading(false);
-    if (success) {
+  useEffect(() => {
+    void loadProduct();
+  }, [loadProduct]);
+
+  function showPurchaseOutcome(result: ProOperationResult) {
+    if (result.status === 'success') {
       setProActive(true);
       Alert.alert('ありがとうございます！', 'Pro機能が有効になりました。', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } else {
-      Alert.alert('購入できませんでした', '再度お試しください。');
+    } else if (result.status === 'pending') {
+      Alert.alert('購入は保留中です', '承認が完了するとPro機能をご利用いただけます。');
+    } else if (result.status === 'no_entitlement') {
+      Alert.alert(
+        '購入を確認しています',
+        '購入を復元してもPro機能が有効にならない場合は、サポートへお問い合わせください。'
+      );
+    } else if (result.status === 'error') {
+      Alert.alert('購入を完了できませんでした', '通信状況をご確認のうえ、再度お試しください。');
     }
   }
 
+  async function handlePurchase() {
+    if (!product) return;
+
+    setProcessing(true);
+    const result = await purchasePro(product);
+    setProcessing(false);
+    showPurchaseOutcome(result);
+  }
+
   async function handleRestore() {
-    setLoading(true);
-    const success = await restorePurchases();
-    setLoading(false);
-    if (success) {
+    setProcessing(true);
+    const result = await restorePurchases();
+    setProcessing(false);
+    if (result.status === 'success') {
       setProActive(true);
       Alert.alert('復元しました', 'Pro機能が有効になりました。', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } else {
+    } else if (result.status === 'no_entitlement') {
       Alert.alert('復元できませんでした', '購入履歴が見つかりませんでした。');
+    } else if (result.status === 'error') {
+      Alert.alert('復元を完了できませんでした', '通信状況をご確認のうえ、再度お試しください。');
     }
   }
 
-  const priceLabel = pkg?.product.priceString ?? '¥480';
+  const priceLabel = product?.product.priceString;
+  const unavailable = !productLoading && !product;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -94,20 +117,36 @@ export default function ProModalScreen() {
         </View>
 
         <View style={styles.bottom}>
-          <Text style={styles.priceNote}>買い切り {priceLabel}（税込）</Text>
+          <Text style={styles.priceNote}>
+            {productLoading
+              ? '価格を読み込み中...'
+              : priceLabel
+                ? `買い切り ${priceLabel}（税込）`
+                : '購入情報を取得できませんでした'}
+          </Text>
           <TouchableOpacity
-            style={[styles.purchaseBtn, loading && styles.purchaseBtnDisabled]}
+            style={[
+              styles.purchaseBtn,
+              (processing || productLoading || unavailable) && styles.purchaseBtnDisabled,
+            ]}
             onPress={handlePurchase}
-            disabled={loading}
+            disabled={processing || productLoading || unavailable}
             activeOpacity={0.8}
           >
-            {loading ? (
+            {processing || productLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.purchaseBtnText}>{priceLabel} で購入する</Text>
+              <Text style={styles.purchaseBtnText}>
+                {priceLabel ? `${priceLabel} で購入する` : '現在購入できません'}
+              </Text>
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleRestore} disabled={loading} activeOpacity={0.7}>
+          {unavailable && (
+            <TouchableOpacity onPress={loadProduct} disabled={processing} activeOpacity={0.7}>
+              <Text style={styles.retryText}>購入情報を再読み込みする</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={handleRestore} disabled={processing} activeOpacity={0.7}>
             <Text style={styles.restoreText}>購入を復元する</Text>
           </TouchableOpacity>
           <Text style={styles.legalNote}>
@@ -226,6 +265,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.ink3,
     textDecorationLine: 'underline',
+  },
+  retryText: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: '600',
   },
   legalNote: {
     fontSize: 10,
