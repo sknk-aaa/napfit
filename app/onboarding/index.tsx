@@ -4,29 +4,20 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   Image,
-  ImageSourcePropType,
+  type ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
-import { Colors } from '@/src/theme/colors';
+import { useThemedStyles } from '@/src/theme/ThemeProvider';
+import { type ThemeColors } from '@/src/theme/colors';
+import { useT } from '@/src/i18n';
 import Sheep from '@/src/components/Sheep';
 
-const { width } = Dimensions.get('window');
-
 type SheepPose = 'smile' | 'sleep' | 'pillow' | 'lie' | 'alert' | 'roll' | 'read';
-
-type Step = {
-  pose: SheepPose;
-  title: string;
-  body: string;
-  accent?: string;
-  accentImages?: ImageSourcePropType[];
-};
 
 const SHEEP = {
   fresh: require('@/assets/images/sheep/fresh.png'),
@@ -34,35 +25,20 @@ const SHEEP = {
   sluggish: require('@/assets/images/sheep/sluggish.png'),
 };
 
-const STEPS: Step[] = [
-  {
-    pose: 'smile',
-    title: 'NapFitへようこそ',
-    body: '仮眠後の気分を記録するだけで、\nあなたに合う仮眠時間がわかります。',
-  },
-  {
-    pose: 'sleep',
-    title: '仮眠時間を選ぼう',
-    body: '15分・20分・30分、またはカスタム時間。\nアラームが時間になったら起こします。',
-    accent: '15 / 20 / 30 分',
-  },
-  {
-    pose: 'alert',
-    title: '起きた感じを記録',
-    body: '「すっきり」「普通」「だるい」の\n3択を1タップで。スキップもOK。',
-    accentImages: [SHEEP.fresh, SHEEP.normal, SHEEP.sluggish],
-  },
-  {
-    pose: 'read',
-    title: '最適な時間がわかる',
-    body: '記録が5件溜まると、あなたにとって\n一番すっきり起きやすい仮眠時間が表示されます。',
-  },
+const STEP_META: { pose: SheepPose; accentImages?: ImageSourcePropType[] }[] = [
+  { pose: 'smile' },
+  { pose: 'sleep' },
+  { pose: 'alert', accentImages: [SHEEP.fresh, SHEEP.normal, SHEEP.sluggish] },
+  { pose: 'read' },
 ];
 
 export default function OnboardingScreen() {
+  const t = useT();
+  const styles = useThemedStyles(makeStyles);
   const [step, setStep] = useState(0);
-  const current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
+  const meta = STEP_META[step];
+  const text = t.onboarding.steps[step];
+  const isLast = step === STEP_META.length - 1;
 
   async function handleNext() {
     if (!isLast) {
@@ -83,159 +59,75 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* スキップボタン */}
       {!isLast && (
         <TouchableOpacity style={styles.skipBtn} onPress={handleSkip} activeOpacity={0.7}>
-          <Text style={styles.skipText}>スキップ</Text>
+          <Text style={styles.skipText}>{t.onboarding.skip}</Text>
         </TouchableOpacity>
       )}
 
-      {/* コンテンツ */}
       <View style={styles.content}>
-        <Sheep pose={current.pose} size={140} />
+        <Sheep pose={meta.pose} size={140} />
 
         <View style={styles.textBlock}>
-          <Text style={styles.title}>{current.title}</Text>
-          <Text style={styles.body}>{current.body}</Text>
-          {current.accentImages ? (
+          <Text style={styles.title}>{text.title}</Text>
+          <Text style={styles.body}>{text.body}</Text>
+          {meta.accentImages ? (
             <View style={styles.accentSheepRow}>
-              {current.accentImages.map((img, i) => (
+              {meta.accentImages.map((img, i) => (
                 <Image key={i} source={img} style={styles.accentSheep} resizeMode="contain" />
               ))}
             </View>
-          ) : current.accent ? (
+          ) : text.accent ? (
             <View style={styles.accentBadge}>
-              <Text style={styles.accentText}>{current.accent}</Text>
+              <Text style={styles.accentText}>{text.accent}</Text>
             </View>
           ) : null}
         </View>
       </View>
 
-      {/* ドットインジケーター */}
       <View style={styles.dots}>
-        {STEPS.map((_, i) => (
-          <View
-            key={i}
-            style={[styles.dot, i === step && styles.dotActive]}
-          />
+        {STEP_META.map((_, i) => (
+          <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
         ))}
       </View>
 
-      {/* 次へボタン */}
       <View style={styles.bottom}>
-        <TouchableOpacity
-          style={styles.nextBtn}
-          onPress={handleNext}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.nextBtnText}>
-            {isLast ? 'はじめる' : '次へ'}
-          </Text>
+        <TouchableOpacity style={styles.nextBtn} onPress={handleNext} activeOpacity={0.8}>
+          <Text style={styles.nextBtnText}>{isLast ? t.onboarding.start : t.onboarding.next}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  skipBtn: {
-    alignSelf: 'flex-end',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  skipText: {
-    fontSize: 13,
-    color: Colors.ink3,
-    fontWeight: '500',
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 36,
-  },
-  textBlock: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: Colors.ink,
-    textAlign: 'center',
-    letterSpacing: -0.3,
-  },
-  body: {
-    fontSize: 15,
-    color: Colors.ink2,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  accentBadge: {
-    backgroundColor: Colors.primarySoft,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginTop: 4,
-  },
-  accentText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.primary,
-    letterSpacing: 1,
-  },
-  accentSheepRow: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 4,
-    alignItems: 'center',
-  },
-  accentSheep: {
-    width: 52,
-    height: 52,
-  },
-  dots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-    paddingBottom: 16,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.ink4,
-  },
-  dotActive: {
-    width: 20,
-    backgroundColor: Colors.primary,
-  },
-  bottom: {
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-  },
-  nextBtn: {
-    height: 54,
-    borderRadius: 16,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 18,
-    elevation: 6,
-  },
-  nextBtnText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    skipBtn: { alignSelf: 'flex-end', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
+    skipText: { fontSize: 13, color: c.ink3, fontWeight: '500' },
+    content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 36 },
+    textBlock: { alignItems: 'center', gap: 12 },
+    title: { fontSize: 24, fontWeight: '800', color: c.ink, textAlign: 'center', letterSpacing: -0.3 },
+    body: { fontSize: 15, color: c.ink2, textAlign: 'center', lineHeight: 24 },
+    accentBadge: { backgroundColor: c.primarySoft, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8, marginTop: 4 },
+    accentText: { fontSize: 18, fontWeight: '700', color: c.primary, letterSpacing: 1 },
+    accentSheepRow: { flexDirection: 'row', gap: 16, marginTop: 4, alignItems: 'center' },
+    accentSheep: { width: 52, height: 52 },
+    dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingBottom: 16 },
+    dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: c.ink4 },
+    dotActive: { width: 20, backgroundColor: c.primary },
+    bottom: { paddingHorizontal: 24, paddingBottom: 16 },
+    nextBtn: {
+      height: 54,
+      borderRadius: 16,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 18,
+      elevation: 6,
+    },
+    nextBtnText: { fontSize: 16, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.2 },
+  });

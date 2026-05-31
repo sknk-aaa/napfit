@@ -66,6 +66,34 @@ export const en = {
     interrupted: 'Stopped',
   },
 
+  onboarding: {
+    skip: 'Skip',
+    next: 'Next',
+    start: 'Get started',
+    steps: [
+      {
+        title: 'Welcome to NapFit',
+        body: 'Just log how you feel after a nap\nand discover your ideal nap length.',
+        accent: '',
+      },
+      {
+        title: 'Choose your nap length',
+        body: '15, 20, 30 minutes, or a custom time.\nThe alarm wakes you when time is up.',
+        accent: '15 / 20 / 30 min',
+      },
+      {
+        title: 'Log how you wake up',
+        body: 'Tap Refreshed, Okay, or Groggy.\nSkipping is fine too.',
+        accent: '',
+      },
+      {
+        title: 'Find your best length',
+        body: 'After 5 logs, the nap length that\nwakes you most refreshed appears.',
+        accent: '',
+      },
+    ],
+  },
+
   history: {
     title: 'History',
     viewList: 'List',
